@@ -1,0 +1,9 @@
+*.lua
+*.ini
+*.rar
+*.zip
+*.7z
+*.vscode
+*.bak
+!League-Server.lua
+!RealLifeLib.lua
