@@ -474,7 +474,7 @@ local function getFolders(path)
 end
 
 
-local function setGenericSchedule(league_config, startingYear, currentTeamIsInLeague, isNewSeason)
+local function setGenericSchedule(league_config, startingYear, currentTeamIsInLeague)
     -- from/to: date (month/day)
     -- startingYear: the year the ML starts
     local total_league_teams = league_config["TOTAL_TEAMS"]
@@ -512,52 +512,50 @@ local function setGenericSchedule(league_config, startingYear, currentTeamIsInLe
             memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 12, mlteamnow.hex)          -- Team ID
         end
         -- end
-        if isNewSeason then
-            for fixture_number = 1, total_games_in_matchday do
-                log(string.format("generic game %d in matchday %d", fixture_number, matchday_number))
-                -- Writing Process
-                local sum = memory.unpack("u8", memory.read(Schedule[date_to_totaldays(to_month, to_day)], 1)) + 1
-                local fixNoHex = memory.pack("u16",
-                    fixture_number - 1 + (total_league_teams / 2) * (matchday_number - 1) + fixtureNumberInterval)
+        for fixture_number = 1, total_games_in_matchday do
+            log(string.format("generic game %d in matchday %d", fixture_number, matchday_number))
+            -- Writing Process
+            local sum = memory.unpack("u8", memory.read(Schedule[date_to_totaldays(to_month, to_day)], 1)) + 1
+            local fixNoHex = memory.pack("u16",
+                fixture_number - 1 + (total_league_teams / 2) * (matchday_number - 1) + fixtureNumberInterval)
 
-                -- Matchday Writing
+            -- Matchday Writing
 
-                -- E6 00 (Fixture id)
-                -- 00 00 11 00 (Liga id)
-                -- 17 (Matchday)
-                -- 20 (League type)
-                -- E5 07 01 1A (Date 2021/01/26)
-                -- 00 00 00 00 (Night Boolean)
-                -- 10 00 00 00 (Match time)
-                -- 10 C0 2C 00 (Home team)
-                -- 04 80 19 00 (Away team)
+            -- E6 00 (Fixture id)
+            -- 00 00 11 00 (Liga id)
+            -- 17 (Matchday)
+            -- 20 (League type)
+            -- E5 07 01 1A (Date 2021/01/26)
+            -- 00 00 00 00 (Night Boolean)
+            -- 10 00 00 00 (Match time)
+            -- 10 C0 2C 00 (Home team)
+            -- 04 80 19 00 (Away team)
 
-                local gameAddress = matchdays[matchday_number][fixture_number]
-                local matchdaySchedule = gamesSchedule[matchday_number][fixture_number]
-                if isDebugging then
-                    log(string.format("matchdays: Game %d of MatchDay %d Before: %s", fixture_number, matchday_number,
-                        memory.hex(memory.read(gameAddress, 28))))
-                    log(string.format("gamesSchedule: Game %d of MatchDay %d Before: %s", fixture_number, matchday_number,
-                        memory.hex(memory.read(matchdaySchedule, 18))))
-                end
-                memory.write(gameAddress + 12, memory.pack("u16", 1))  -- Night Bool
-                memory.write(gameAddress + 16, memory.pack("u16", 20)) -- Time
-                -- if changeDate then
-                memory.write(gameAddress + 8,
-                    memory.pack("u16", startingYear) .. memory.pack("u8", to_month) .. memory.pack("u8", to_day))
-                -- end
-                if isDebugging then
-                    log(string.format("matchdays: Game %d of MatchDay %d After: %s", fixture_number, matchday_number,
-                        memory.hex(memory.read(gameAddress, 28))))
-                    log(string.format("gamesSchedule: Game %d of MatchDay %d After: %s", fixture_number, matchday_number,
-                        memory.hex(memory.read(matchdaySchedule, 18))))
-                end
-                -- Schedule Writing
-                memory.write(Schedule[date_to_totaldays(to_month, to_day)], memory.pack("u8", sum))        -- (addr_gamedays_sum)
-                -- Write new fixture after previous ones (if there any)
-                memory.write(Schedule[date_to_totaldays(to_month, to_day)] - (sum * (-2) + 562), fixNoHex) -- (addr_10gamedays)
-                memory.write(Schedule[date_to_totaldays(to_month, to_day)] + 7, "\x00")
+            local gameAddress = matchdays[matchday_number][fixture_number]
+            local matchdaySchedule = gamesSchedule[matchday_number][fixture_number]
+            if isDebugging then
+                log(string.format("matchdays: Game %d of MatchDay %d Before: %s", fixture_number, matchday_number,
+                    memory.hex(memory.read(gameAddress, 28))))
+                log(string.format("gamesSchedule: Game %d of MatchDay %d Before: %s", fixture_number, matchday_number,
+                    memory.hex(memory.read(matchdaySchedule, 18))))
             end
+            memory.write(gameAddress + 12, memory.pack("u16", 1))  -- Night Bool
+            memory.write(gameAddress + 16, memory.pack("u16", 20)) -- Time
+            -- if changeDate then
+            memory.write(gameAddress + 8,
+                memory.pack("u16", startingYear) .. memory.pack("u8", to_month) .. memory.pack("u8", to_day))
+            -- end
+            if isDebugging then
+                log(string.format("matchdays: Game %d of MatchDay %d After: %s", fixture_number, matchday_number,
+                    memory.hex(memory.read(gameAddress, 28))))
+                log(string.format("gamesSchedule: Game %d of MatchDay %d After: %s", fixture_number, matchday_number,
+                    memory.hex(memory.read(matchdaySchedule, 18))))
+            end
+            -- Schedule Writing
+            memory.write(Schedule[date_to_totaldays(to_month, to_day)], memory.pack("u8", sum))        -- (addr_gamedays_sum)
+            -- Write new fixture after previous ones (if there any)
+            memory.write(Schedule[date_to_totaldays(to_month, to_day)] - (sum * (-2) + 562), fixNoHex) -- (addr_10gamedays)
+            memory.write(Schedule[date_to_totaldays(to_month, to_day)] + 7, "\x00")
         end
     end
 end
@@ -643,51 +641,45 @@ function m.data_ready(ctx, filename)
                         error("schecule was not found, aborting...")
                     end
                 end
-                local isNewSeason = (currentMonth == 1 and leagues_configs[i]["STARTS_IN_JAN"] == "true") or
-                    ((currentMonth == 6 or currentMonth == 8) and leagues_configs[i]["STARTS_IN_JAN"] == "false")
-                -- if isNewSeason then
-                local total_matchdays
-                local total_games_per_matchday
-                if leagues_configs[i]["TOTAL_MATCHDAYS"] ~= nil then
-                    total_matchdays = leagues_configs[i]["TOTAL_MATCHDAYS"]
-                else
-                    total_matchdays = leagues_configs[i]["TOTAL_TEAMS"] * 2 - 2
-                end
-                if leagues_configs[i]["TOTAL_GAMES_PER_MATCHDAY"] ~= nil then
-                    total_games_per_matchday = leagues_configs[i]["TOTAL_GAMES_PER_MATCHDAY"]
-                else
-                    total_games_per_matchday = leagues_configs[i]["TOTAL_TEAMS"] / 2
-                end
-                if existingYears[tostring(yearnow.dec)] then -- custom edit based on year
-                    local mapsPath = configPath .. tostring(yearnow.dec)
-                    teamNamestoIDs = readTeamsMap(mapsPath .. "\\map_team.txt")
-                    fixtureNumber, gameweekNumber, fromDates, toDates, isNight, matchStartTime, homeTeams, awayTeams =
-                        readMatchdays(
-                            mapsPath ..
-                            "\\map_matchdays.txt")
-
-                    if isNewSeason then
+                if (currentMonth == 1 and leagues_configs[i]["STARTS_IN_JAN"] == "true") or ((currentMonth == 6 or currentMonth == 8) and leagues_configs[i]["STARTS_IN_JAN"] == "false") then
+                    local total_matchdays
+                    local total_games_per_matchday
+                    if leagues_configs[i]["TOTAL_MATCHDAYS"] ~= nil then
+                        total_matchdays = leagues_configs[i]["TOTAL_MATCHDAYS"]
+                    else
+                        total_matchdays = leagues_configs[i]["TOTAL_TEAMS"] * 2 - 2
+                    end
+                    if leagues_configs[i]["TOTAL_GAMES_PER_MATCHDAY"] ~= nil then
+                        total_games_per_matchday = leagues_configs[i]["TOTAL_GAMES_PER_MATCHDAY"]
+                    else
+                        total_games_per_matchday = leagues_configs[i]["TOTAL_TEAMS"] / 2
+                    end
+                    if existingYears[tostring(yearnow.dec)] then -- custom edit based on year
+                        local mapsPath = configPath .. tostring(yearnow.dec)
+                        teamNamestoIDs = readTeamsMap(mapsPath .. "\\map_team.txt")
+                        fixtureNumber, gameweekNumber, fromDates, toDates, isNight, matchStartTime, homeTeams, awayTeams =
+                            readMatchdays(
+                                mapsPath ..
+                                "\\map_matchdays.txt")
                         matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), yearnow.hex, total_matchdays,
                             total_games_per_matchday)                                                                 -- Found in ML Main Menu> Team Info> Schedule
                         gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
-                    end
-                    teamIDsToHex = gamedayToTeamIDs(matchdays[1])
-                    for n = 1, #fixtureNumber do
-                        local mon, day = fromDates[n]:match("(%d+)/(%d+)")
-                        local from_month, from_day = tonumber(mon), tonumber(day)
-                        mon, day = toDates[n]:match("(%d+)/(%d+)")
-                        local to_month, to_day = tonumber(mon), tonumber(day)
-                        local startingYear = yearnow.dec
+                        teamIDsToHex = gamedayToTeamIDs(matchdays[1])
+                        for n = 1, #fixtureNumber do
+                            local mon, day = fromDates[n]:match("(%d+)/(%d+)")
+                            local from_month, from_day = tonumber(mon), tonumber(day)
+                            mon, day = toDates[n]:match("(%d+)/(%d+)")
+                            local to_month, to_day = tonumber(mon), tonumber(day)
+                            local startingYear = yearnow.dec
 
-                        if leagues_configs[i]["STARTS_IN_JAN"] == "false" then
-                            if to_month <= 6 then
-                                startingYear = secondYear
+                            if leagues_configs[i]["STARTS_IN_JAN"] == "false" then
+                                if to_month <= 6 then
+                                    startingYear = secondYear
+                                end
                             end
-                        end
-                        local fixNoHex = memory.pack("u16",
-                            fixtureNumber[n] - 1 + (leagues_configs[i]["TOTAL_TEAMS"] / 2) * (gameweekNumber[n] - 1) +
-                            fixtureNumberInterval)
-                        if isNewSeason then
+                            local fixNoHex = memory.pack("u16",
+                                fixtureNumber[n] - 1 + (leagues_configs[i]["TOTAL_TEAMS"] / 2) * (gameweekNumber[n] - 1) +
+                                fixtureNumberInterval)
                             local sum = memory.unpack("u8", memory.read(Schedule[date_to_totaldays(to_month, to_day)], 1)) +
                                 1
                             local gameAddress = matchdays[gameweekNumber[n]][fixtureNumber[n]]
@@ -728,54 +720,49 @@ function m.data_ready(ctx, filename)
                             -- Remove "from_date" games
                             -- TODO: Decode that section for proper writing
                             memory.write(Schedule[date_to_totaldays(from_month, from_day)] - 560, string.rep("\xff", 560))
-                        else
-                            log("fixtures should be already set before")
-                        end
-                        -- Stop or Skip
-                        if i == currentleagueid.dec then
-                            if mlteamnow.dec == teamNamestoIDs[homeTeams[n]] or mlteamnow.dec == teamNamestoIDs[awayTeams[n]] then
-                                -- Stop
-                                memory.write(Schedule[date_to_totaldays(to_month, to_day)] + 7, "\x00")
-                                -- Calendar Writing
-                                -- TODO: Define that for UCL,... (01), domestic league/cup (02), or nothing (03)
-                                local game_type_hex = "\x02\x00"
+                            -- Stop or Skip
+                            if i == currentleagueid.dec then
+                                if mlteamnow.dec == teamNamestoIDs[homeTeams[n]] or mlteamnow.dec == teamNamestoIDs[awayTeams[n]] then
+                                    -- Stop
+                                    memory.write(Schedule[date_to_totaldays(to_month, to_day)] + 7, "\x00")
+                                    -- Calendar Writing
+                                    -- TODO: Define that for UCL,... (01), domestic league/cup (02), or nothing (03)
+                                    local game_type_hex = "\x02\x00"
 
-                                memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)], fixNoHex)        -- C8 00 Matchday ID
-                                memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 2,
-                                    leagues_configs[i]["ID"].hex)                                                     -- 11 00 League ID
-                                memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 4,
-                                    memory.pack("u16", gameweekNumber[n] - 1))                                        -- 14 00 Matchday № this 21 day
-                                memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 6, "\x00\x00")  -- 00 00 Blank
-                                memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 8,
-                                    game_type_hex)                                                                    -- 02 00 Playable day (01 UCL) (03 not Playableday)
-                                memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 10, "\x00\x00") -- 00 00 Blank
-                                memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 12,
-                                    mlteamnow.hex)                                                                    -- Team ID
-                                memory.write(CalendarAddresses[date_to_totaldays(from_month, from_day)], BlankDate)   -- (from,Blank)
-                            else
-                                -- Skip
-                                -- That might be causing an error that's we didn't experience yet
-                                -- Some sort of double writing
-                                memory.write(Schedule[date_to_totaldays(to_month, to_day)] + 7, "\xff")
-                                -- Calendar Writing
+                                    memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)], fixNoHex)        -- C8 00 Matchday ID
+                                    memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 2,
+                                        leagues_configs[i]["ID"].hex)                                                     -- 11 00 League ID
+                                    memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 4,
+                                        memory.pack("u16", gameweekNumber[n] - 1))                                        -- 14 00 Matchday № this 21 day
+                                    memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 6, "\x00\x00")  -- 00 00 Blank
+                                    memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 8,
+                                        game_type_hex)                                                                    -- 02 00 Playable day (01 UCL) (03 not Playableday)
+                                    memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 10, "\x00\x00") -- 00 00 Blank
+                                    memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 12,
+                                        mlteamnow.hex)                                                                    -- Team ID
+                                    memory.write(CalendarAddresses[date_to_totaldays(from_month, from_day)], BlankDate)   -- (from,Blank)
+                                else
+                                    -- Skip
+                                    -- That might be causing an error that's we didn't experience yet
+                                    -- Some sort of double writing
+                                    memory.write(Schedule[date_to_totaldays(to_month, to_day)] + 7, "\xff")
+                                    -- Calendar Writing
+                                end
                             end
                         end
-                    end
-                elseif not existingYears[tostring(yearnow.dec)] and leagues_configs[i]["NEEDS_GENERIC"] == "true" then -- generic schedule for created leagues
-                    -- only needs dates set
-                    log("applying generic schedule")
-                    if isNewSeason then
+                    elseif not existingYears[tostring(yearnow.dec)] and leagues_configs[i]["NEEDS_GENERIC"] == "true" then -- generic schedule for created leagues
+                        -- only needs dates set
+                        log("applying generic schedule")
                         matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), "\xff\xff", total_matchdays,
                             total_games_per_matchday)
                         gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday)
+                        setGenericSchedule(leagues_configs[i], yearnow.dec, i == currentleagueid.dec)
+                    else
+                        error("current year config is not found and generic is disabled, aborting...")
                     end
-                    setGenericSchedule(leagues_configs[i], yearnow.dec, i == currentleagueid.dec, isNewSeason)
                 else
-                    error("current year config is not found and generic is disabled, aborting...")
+                    log(string.format("skipping %s, already set before or not supposed to be set yet", compName))
                 end
-                -- else
-                --     log(string.format("skipping %s, already set before or not supposed to be set yet", compName))
-                -- end
                 -- else
                 --     log("league is not in content folder, nothing has changed")
                 --     log("if that should not happen, make sure the league name matches the map")
