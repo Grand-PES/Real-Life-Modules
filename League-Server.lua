@@ -305,14 +305,14 @@ local function getGamesOfLeagueUsingMemory(currentleagueid, matchdaytotal)
     return t
 end
 
-local function getGamesOfCompUsingLoop(currentleagueid, yearnow, total_matchdays, total_games_per_matchday)
+local function getGamesOfCompUsingLoop(currentleagueid, type_byte, yearnow, total_matchdays, total_games_per_matchday)
     local t = {}
     local addr
     for matchday = 1, total_matchdays do
         t[matchday] = {}
         for game = 1, total_games_per_matchday do
             if matchday == 1 and game == 1 then
-                addr = memory.safe_search("\x00\x00" .. currentleagueid .. "\x00\x20" .. yearnow, startAddress,
+                addr = memory.safe_search("\x00\x00" .. currentleagueid .. type_byte .. "\x20" .. yearnow, startAddress,
                     endAddress) - 2
                 if addr then
                     fixtureNumberInterval = memory.unpack("u16", memory.read(addr, 2))
@@ -684,6 +684,12 @@ function m.data_ready(ctx, filename)
                 if (currentMonth == 1 and leagues_configs[i]["STARTS_IN_JAN"] == "true") or ((currentMonth == 6 or currentMonth == 8) and leagues_configs[i]["STARTS_IN_JAN"] == "false") then
                     local total_matchdays
                     local total_games_per_matchday
+                    local typeByte
+                    if leagues_configs[i]["TYPE"] == "cup" then
+                        typeByte = "\x35"
+                    else
+                        typeByte = "\x00"
+                    end
                     if leagues_configs[i]["TOTAL_MATCHDAYS"] ~= nil then
                         total_matchdays = leagues_configs[i]["TOTAL_MATCHDAYS"]
                     else
@@ -701,7 +707,7 @@ function m.data_ready(ctx, filename)
                             readMatchdays(
                                 mapsPath ..
                                 "\\map_matchdays.txt")
-                        matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), yearnow.hex, total_matchdays,
+                        matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), typeByte, yearnow.hex, total_matchdays,
                             total_games_per_matchday)                                                                 -- Found in ML Main Menu> Team Info> Schedule
                         gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
                         teamIDsToHex = gamedayToTeamIDs(matchdays[1])
@@ -793,7 +799,7 @@ function m.data_ready(ctx, filename)
                     elseif not existingYears[tostring(yearnow.dec)] and leagues_configs[i]["NEEDS_GENERIC"] == "true" then -- generic schedule for created leagues
                         -- only needs dates set
                         log("applying generic schedule")
-                        matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), "\xff\xff", total_matchdays,
+                        matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), typeByte, "\xff\xff", total_matchdays,
                             total_games_per_matchday)
                         gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday)
                         setGenericSchedule(leagues_configs[i], yearnow.dec, i == currentleagueid.dec)
