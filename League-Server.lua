@@ -567,12 +567,11 @@ local function getFolders(path)
 end
 
 
-local function setGenericSchedule(league_config, startingYear, currentTeamIsInLeague)
+local function setGenericSchedule(league_config, startingYear, currentTeamIsInLeague, total_matchdays,
+                                  total_games_in_matchday)
     -- from/to: date (month/day)
     -- startingYear: the year the ML starts
     local total_league_teams = league_config["TOTAL_TEAMS"]
-    local total_matchdays = total_league_teams * 2 - 2
-    local total_games_in_matchday = total_league_teams / 2
     local secondYear = startingYear + 1
     log(string.format("%d teams %d matchdays with %d games", total_league_teams, total_matchdays, total_games_in_matchday))
     for matchday_number = 1, total_matchdays do
@@ -860,7 +859,8 @@ function m.data_ready(ctx, filename)
                         matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), typeByte, "\xff\xff", total_matchdays,
                             total_games_per_matchday)
                         gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday)
-                        setGenericSchedule(leagues_configs[i], yearnow.dec, i == currentleagueid.dec)
+                        setGenericSchedule(leagues_configs[i], yearnow.dec, i == currentleagueid.dec, total_matchdays,
+                            total_games_per_matchday)
                     else
                         error("current year config is not found and generic is disabled, aborting...")
                     end
