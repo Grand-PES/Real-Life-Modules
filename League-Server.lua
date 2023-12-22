@@ -4,12 +4,24 @@
 
 local m = {}
 -- Constants
-local contentPath = ".\\content\\season-server\\"
+local contentPath = ".\\content\\League-Server\\"
 local startAddress = 0x00007FF4D0000000
 local endAddress = 0x00007FF4EFFFFFF0
 local hexPat = '0x%x+'
 local BlankDate = ("\xff\xff\xff\xff\x37\x00\x00\x00\x03\x00\x00\x00\xff\xff\xff\xff")
 local genericSchedule = {
+    [2] = {
+        ["Jan"] = {
+            ["cup"] = {
+                "2/17",
+            },
+        },
+        ["June"] = {
+            ["league"] = {},
+            ["cup"] = {},
+            ["cl"] = {},
+        },
+    },
     [18] = {
         ["Jan"] = {
             ["league"] = {
@@ -29,6 +41,7 @@ local genericSchedule = {
                 "5/23",
                 "6/20",
                 "6/24",
+                -- mid Season
                 "7/20",
                 "7/26",
                 "8/1",
@@ -87,6 +100,7 @@ local genericSchedule = {
                 "12/18",
                 "12/22",
                 "12/26",
+                -- mid Season
                 "1/14",
                 "1/21",
                 "1/24",
@@ -113,7 +127,51 @@ local genericSchedule = {
     },
     [22] = {
         ["Jan"] = {
-            ["league"] = {},
+            ["league"] = {
+                "1/17",
+                "1/24",
+                "1/29",
+                "2/8",
+                "2/14",
+                "2/21",
+                "2/28",
+                "3/7",
+                "3/13",
+                "3/21",
+                "3/28",
+                "4/11",
+                "4/18",
+                "4/23",
+                "4/28",
+                "5/2",
+                "5/11",
+                "5/18",
+                "5/23",
+                "6/16",
+                "6/24",
+                -- mid Season
+                "7/16",
+                "7/20",
+                "7/26",
+                "8/8",
+                "8/22",
+                "8/29",
+                "9/12",
+                "9/19",
+                "9/26",
+                "10/3",
+                "10/10",
+                "10/17",
+                "10/24",
+                "11/4",
+                "11/12",
+                "11/18",
+                "11/28",
+                "12/5",
+                "12/12",
+                "12/18",
+                "12/23",
+            },
             ["cup"] = {},
             ["cl"] = {},
         },
