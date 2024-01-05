@@ -12,14 +12,12 @@ local BlankDate = ("\xff\xff\xff\xff\x37\x00\x00\x00\x03\x00\x00\x00\xff\xff\xff
 local genericSchedule = {
     [2] = {
         ["Jan"] = {
-            ["cup"] = {
+            ["supercup"] = {
                 "2/17",
             },
         },
         ["June"] = {
-            ["league"] = {},
-            ["cup"] = {},
-            ["cl"] = {},
+            ["supercup"] = {},
         },
     },
     [18] = {
@@ -220,6 +218,18 @@ local genericSchedule = {
                 "10/1",
                 "10/2",
             },
+            ["cup"] = {},
+            ["cl"] = {},
+        },
+    },
+    [40] = {
+        ["Jan"] = {
+            ["league"] = {},
+            ["cup"] = {},
+            ["cl"] = {},
+        },
+        ["June"] = {
+            ["league"] = {},
             ["cup"] = {},
             ["cl"] = {},
         },
