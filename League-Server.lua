@@ -734,6 +734,8 @@ function m.data_ready(ctx, filename)
                     elseif leagues_configs[currentleagueid.dec]["STARTS_IN_JAN"] == "false" then
                         addr = getAddressWithVariableBytes("\x00\x00\x06\x00\x00\x00", 2, "\x01\x01\x09\x00\xF5",
                             startAddress)
+                    else
+                        error("STARTS_IN_JAN field in config.ini is mandatory")
                     end
                     if addr then
                         table.insert(Schedule, 1, addr - 2)
