@@ -769,16 +769,27 @@ function m.data_ready(ctx, filename)
                     else
                         total_games_per_matchday = leagues_configs[i]["TOTAL_TEAMS"] / 2
                     end
-                    if existingYears[tostring(yearnow.dec)] then -- custom edit based on year
+                    local hasCustom = existingYears[tostring(yearnow.dec)]
+                    local needGeneric = leagues_configs[i]["NEEDS_GENERIC"] == "true"
+                    if needGeneric then
+                        matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), typeByte, "\xff\xff",
+                            total_matchdays,
+                            total_games_per_matchday)
+                        gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday)
+                    else
+                        matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), typeByte, yearnow.hex,
+                            total_matchdays,
+                            total_games_per_matchday)                                                                 -- Found in ML Main Menu> Team Info> Schedule
+                        gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
+                    end
+                    if hasCustom then                                                                                 -- custom edit based on year
                         local mapsPath = configPath .. tostring(yearnow.dec)
                         teamNamestoIDs = readTeamsMap(mapsPath .. "\\map_team.txt")
                         fixtureNumber, gameweekNumber, fromDates, toDates, isNight, matchStartTime, homeTeams, awayTeams =
                             readMatchdays(
                                 mapsPath ..
                                 "\\map_matchdays.txt")
-                        matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), typeByte, yearnow.hex, total_matchdays,
-                            total_games_per_matchday)                                                                 -- Found in ML Main Menu> Team Info> Schedule
-                        gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
+
                         teamIDsToHex = gamedayToTeamIDs(matchdays[1])
                         for n = 1, #fixtureNumber do
                             local mon, day = fromDates[n]:match("(%d+)/(%d+)")
@@ -834,7 +845,10 @@ function m.data_ready(ctx, filename)
                             memory.write(Schedule[date_to_totaldays(to_month, to_day)] - (sum * (-2) + 562), fixNoHex)
                             -- Remove "from_date" games
                             -- TODO: Decode that section for proper writing
-                            memory.write(Schedule[date_to_totaldays(from_month, from_day)] - 560, string.rep("\xff", 560))
+                            if not needGeneric then
+                                memory.write(Schedule[date_to_totaldays(from_month, from_day)] - 560,
+                                    string.rep("\xff", 560))
+                            end
                             -- Stop or Skip
                             if i == currentleagueid.dec then
                                 if mlteamnow.dec == teamNamestoIDs[homeTeams[n]] or mlteamnow.dec == teamNamestoIDs[awayTeams[n]] then
@@ -854,8 +868,11 @@ function m.data_ready(ctx, filename)
                                         game_type_hex)                                                                    -- 02 00 Playable day (01 UCL) (03 not Playableday)
                                     memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 10, "\x00\x00") -- 00 00 Blank
                                     memory.write(CalendarAddresses[date_to_totaldays(to_month, to_day)] + 12,
-                                        mlteamnow.hex)                                                                    -- Team ID
-                                    memory.write(CalendarAddresses[date_to_totaldays(from_month, from_day)], BlankDate)   -- (from,Blank)
+                                        mlteamnow.hex)
+                                    if not needGeneric then
+                                        memory.write(CalendarAddresses[date_to_totaldays(from_month, from_day)],
+                                            BlankDate) -- (from,Blank)
+                                    end                -- Team ID
                                 else
                                     -- Skip
                                     -- That might be causing an error that's we didn't experience yet
@@ -865,16 +882,15 @@ function m.data_ready(ctx, filename)
                                 end
                             end
                         end
-                    elseif not existingYears[tostring(yearnow.dec)] and leagues_configs[i]["NEEDS_GENERIC"] == "true" then -- generic schedule for created leagues
-                        -- only needs dates set
-                        log("applying generic schedule")
-                        matchdays = getGamesOfCompUsingLoop(memory.pack("u16", i), typeByte, "\xff\xff", total_matchdays,
-                            total_games_per_matchday)
-                        gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday)
-                        setGenericSchedule(leagues_configs[i], yearnow.dec, i == currentleagueid.dec, total_matchdays,
-                            total_games_per_matchday)
                     else
-                        error("current year config is not found and generic is disabled, aborting...")
+                        if needGeneric then -- generic schedule for created leagues
+                            -- only needs dates set
+                            log("applying generic schedule")
+                            setGenericSchedule(leagues_configs[i], yearnow.dec, i == currentleagueid.dec, total_matchdays,
+                                total_games_per_matchday)
+                        else
+                            log("current year config is not found and generic is disabled, aborting...")
+                        end
                     end
                 else
                     log(string.format("skipping %s, already set before or not supposed to be set yet", compName))
