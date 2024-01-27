@@ -776,8 +776,12 @@ function m.data_ready(ctx, filename)
 
                         teamIDsToHex = gamedayToTeamIDs(matchdays[1])
                         for n = 1, #customMatchdaysData["FixtureNumber"] do
-                            local mon, day = customMatchdaysData["FromDate"][n]:match("(%d+)/(%d+)")
-                            local from_month, from_day = tonumber(mon), tonumber(day)
+                            local mon, day
+                            local from_month, from_day
+                            if not needGeneric then
+                                mon, day = customMatchdaysData["FromDate"][n]:match("(%d+)/(%d+)")
+                                from_month, from_day = tonumber(mon), tonumber(day)
+                            end
                             mon, day = customMatchdaysData["ToDate"][n]:match("(%d+)/(%d+)")
                             local to_month, to_day = tonumber(mon), tonumber(day)
                             local startingYear = yearnow.dec
