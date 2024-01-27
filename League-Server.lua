@@ -837,7 +837,9 @@ function m.data_ready(ctx, filename)
                             end
                             -- Stop or Skip
                             if i == currentleagueid.dec then
+                                log("current team is in current league")
                                 if mlteamnow.dec == teamNamestoIDs[homeTeam] or mlteamnow.dec == teamNamestoIDs[awayTeam] then
+                                    log("currunt match has current team")
                                     -- Stop
                                     memory.write(Schedule[date_to_totaldays(to_month, to_day)] + 7, "\x00")
                                     -- Calendar Writing
