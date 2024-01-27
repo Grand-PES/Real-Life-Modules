@@ -259,14 +259,6 @@ function m.dispose()
     matchdays = {}
     teamIDsToHex = {}
     teamNamestoIDs = {}
-    fixtureNumber = {}
-    gameweekNumber = {}
-    fromDates = {}
-    toDates = {}
-    isNight = {}
-    matchStartTime = {}
-    homeTeams = {}
-    awayTeams = {}
 end
 
 local function get_rlm_lib(ctx)
@@ -820,9 +812,9 @@ function m.data_ready(ctx, filename)
                             memory.write(gameAddress + 12, memory.pack("u16", isNight))
                             memory.write(gameAddress + 16, memory.pack("u16", matchStartTime))
                             memory.write(gameAddress + 20,
-                                teamIDsToHex[teamNamestoIDs[homeTeam]] .. teamIDsToHex[teamNamestoIDs[awayTeams]])
+                                teamIDsToHex[teamNamestoIDs[homeTeam]] .. teamIDsToHex[teamNamestoIDs[awayTeam]])
                             memory.write(matchdaySchedule + 10,
-                                teamIDsToHex[teamNamestoIDs[homeTeam]] .. teamIDsToHex[teamNamestoIDs[awayTeams]])
+                                teamIDsToHex[teamNamestoIDs[homeTeam]] .. teamIDsToHex[teamNamestoIDs[awayTeam]])
 
                             if isDebugging then
                                 log(string.format("matchdays: Game %d of MatchDay %d After: %s", fixtureNumber,
