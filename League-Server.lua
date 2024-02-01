@@ -1111,14 +1111,13 @@ function m.data_ready(ctx, filename)
 					end
 					local hasCustom = existingYears[tostring(yearnow.dec)]
 					local needGeneric = leagues_configs[i]["NEEDS_GENERIC"] == "true"
+					gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
 					if needGeneric then
 						matchdays =
 							getGamesOfCompUsingLoop(i, typeByte, "\xff\xff", total_matchdays, total_games_per_matchday)
-						gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday)
 					else
 						matchdays =
 							getGamesOfCompUsingLoop(i, typeByte, yearnow.hex, total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule
-						gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
 					end
 					if hasCustom then -- custom edit based on year
 						local mapsPath = configPath .. tostring(yearnow.dec)
