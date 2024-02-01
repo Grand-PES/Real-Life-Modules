@@ -656,15 +656,15 @@ local function getGamesOfCompUsingLoop(currentleagueid, type_byte, yearnow, tota
 		for game = 1, total_games_per_matchday do
 			if matchday == 1 and game == 1 then
 				addr = memory.safe_search(
-					"\x00\x00" .. currentleagueid .. type_byte .. "\x20" .. yearnow,
+					"\x00\x00" .. memory.pack("u16", currentleagueid) .. type_byte .. "\x20" .. yearnow,
 					startAddress,
 					endAddress
-				) - 2
+				)
 				if addr then
-					fixtureNumberInterval = memory.unpack("u16", memory.read(addr, 2))
-					table.insert(t[1], addr)
+					fixtureNumberInterval = memory.unpack("u16", memory.read(addr - 2, 2))
+					table.insert(t[1], addr - 2)
 				else
-					error("matchday 1 game 1 wasn't found, aborting...")
+					log(string.format("matchday 1 game 1 wasn't found for %d, skipping...", currentleagueid))
 					return {}
 				end
 			else
@@ -1112,22 +1112,12 @@ function m.data_ready(ctx, filename)
 					local hasCustom = existingYears[tostring(yearnow.dec)]
 					local needGeneric = leagues_configs[i]["NEEDS_GENERIC"] == "true"
 					if needGeneric then
-						matchdays = getGamesOfCompUsingLoop(
-							memory.pack("u16", i),
-							typeByte,
-							"\xff\xff",
-							total_matchdays,
-							total_games_per_matchday
-						)
+						matchdays =
+							getGamesOfCompUsingLoop(i, typeByte, "\xff\xff", total_matchdays, total_games_per_matchday)
 						gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday)
 					else
-						matchdays = getGamesOfCompUsingLoop(
-							memory.pack("u16", i),
-							typeByte,
-							yearnow.hex,
-							total_matchdays,
-							total_games_per_matchday
-						) -- Found in ML Main Menu> Team Info> Schedule
+						matchdays =
+							getGamesOfCompUsingLoop(i, typeByte, yearnow.hex, total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule
 						gamesSchedule = getSchedule(memory.pack("u16", i), total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
 					end
 					if hasCustom then -- custom edit based on year
