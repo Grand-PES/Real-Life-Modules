@@ -608,12 +608,31 @@ local function gamedayToTeamIDs(matchday)
 	return t
 end
 
-local function getAddressWithVariableBytes(addrBeginning, variableByteLength, addrEndning, variableStartAddress)
+local function getAddressWithVariableBytesUsingEnd(addrBeginning, variableByteLength, addrEndning, variableStartAddress)
 	local addr = memory.safe_search(addrEndning, variableStartAddress, endAddress)
 	if memory.read(addr - #addrBeginning - variableByteLength, #addrBeginning) == addrBeginning then
 		return addr - variableByteLength - #addrBeginning
 	else
-		return getAddressWithVariableBytes(addrBeginning, variableByteLength, addrEndning, addr + #addrEndning)
+		return getAddressWithVariableBytesUsingEnd(addrBeginning, variableByteLength, addrEndning, addr + #addrEndning)
+	end
+end
+
+local function getAddressWithVariableBytesUsingStart(
+	addrBeginning,
+	variableByteLength,
+	addrEndning,
+	variableStartAddress
+)
+	local addr = memory.safe_search(addrBeginning, variableStartAddress, endAddress)
+	if memory.read(addr + #addrBeginning + variableByteLength, #addrEndning) == addrEndning then
+		return addr
+	else
+		return getAddressWithVariableBytesUsingStart(
+			addrBeginning,
+			variableByteLength,
+			addrEndning,
+			addr + #addrBeginning
+		)
 	end
 end
 
@@ -699,7 +718,7 @@ local function getSchedule(currentleagueid, total_matchdays, total_games_per_mat
 		t[matchday] = {}
 		for game = 1, total_games_per_matchday do
 			if matchday == 1 and game == 1 then
-				addr = getAddressWithVariableBytes(
+				addr = getAddressWithVariableBytesUsingStart(
 					currentleagueid .. "\x00\x00",
 					11,
 					"\xff" .. currentleagueid,
@@ -1059,14 +1078,14 @@ function m.data_ready(ctx, filename)
 				if tableIsEmpty(Schedule) then
 					local addr
 					if leagues_configs[currentleagueid.dec]["STARTS_IN_JAN"] == "true" then
-						addr = getAddressWithVariableBytes(
+						addr = getAddressWithVariableBytesUsingEnd(
 							"\x00\x00\x03\x00\x00\x00",
 							2,
 							"\x01\x01\x01\x00\x01",
 							startAddress
 						)
 					elseif leagues_configs[currentleagueid.dec]["STARTS_IN_JAN"] == "false" then
-						addr = getAddressWithVariableBytes(
+						addr = getAddressWithVariableBytesUsingEnd(
 							"\x00\x00\x06\x00\x00\x00",
 							2,
 							"\x01\x01\x09\x00\xF5",
