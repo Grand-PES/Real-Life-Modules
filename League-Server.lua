@@ -674,7 +674,7 @@ local function getGamesOfCompUsingLoop(currentleagueid, type_byte, yearnow, tota
 					fixtureNumberInterval = memory.unpack("u16", memory.read(addr - 2, 2))
 					table.insert(t[1], addr - 2)
 				else
-					log(string.format("matchday 1 game 1 wasn't found for %d, skipping...", currentleagueid))
+					log(string.format("matchday 1 game 1 wasn't found for %s, skipping...", currentleagueid))
 					return {}
 				end
 			else
@@ -712,7 +712,7 @@ local function getSchedule(currentleagueid, total_matchdays, total_games_per_mat
 				if addr then
 					table.insert(t[1], addr - 6)
 				else
-					log(string.format("matchday 1 game 1 wasn't found for %d, skipping...", currentleagueid))
+					log(string.format("matchday 1 game 1 wasn't found for %s, skipping...", currentleagueid))
 					return {}
 				end
 			else
