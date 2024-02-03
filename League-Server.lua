@@ -706,7 +706,7 @@ local function getSchedule(currentleagueid, total_matchdays, total_games_per_mat
 				addr = getAddressWithVariableBytes(
 					memory.pack("u16", currentleagueid) .. "\x00\x00",
 					10,
-					"\xff" .. currentleagueid .. "\x00\x00\xff\xff\xf7",
+					"\xff\xff" .. memory.pack("u16", currentleagueid) .. "\x00\x00\xff\xff\xf7\x07",
 					startAddress
 				)
 				if addr then
@@ -1110,6 +1110,8 @@ function m.data_ready(ctx, filename)
 					local total_games_per_matchday
 					local typeByte
 					if leagues_configs[i]["TYPE"] == "cup" then
+						typeByte = "\x2e"
+					elseif leagues_configs[i]["TYPE"] == "supercup" then
 						typeByte = "\x35"
 					else
 						typeByte = "\x00"
