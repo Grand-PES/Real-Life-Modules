@@ -610,10 +610,14 @@ end
 
 local function getAddressWithVariableBytes(addrBeginning, variableByteLength, addrEndning, variableStartAddress)
 	local addr = memory.safe_search(addrEndning, variableStartAddress, endAddress)
-	if memory.read(addr - #addrBeginning - variableByteLength, #addrBeginning) == addrBeginning then
-		return addr - variableByteLength - #addrBeginning
+	if addr then
+		if memory.read(addr - #addrBeginning - variableByteLength, #addrBeginning) == addrBeginning then
+			return addr - variableByteLength - #addrBeginning
+		else
+			return getAddressWithVariableBytes(addrBeginning, variableByteLength, addrEndning, addr + #addrEndning)
+		end
 	else
-		return getAddressWithVariableBytes(addrBeginning, variableByteLength, addrEndning, addr + #addrEndning)
+		return nil
 	end
 end
 
@@ -708,7 +712,7 @@ local function getSchedule(currentleagueid, total_matchdays, total_games_per_mat
 				if addr then
 					table.insert(t[1], addr - 6)
 				else
-					error("matchday 1 game 1 wasn't found, aborting...")
+					log(string.format("matchday 1 game 1 wasn't found for %d, skipping...", currentleagueid))
 					return {}
 				end
 			else
