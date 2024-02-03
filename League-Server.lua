@@ -705,8 +705,8 @@ local function getSchedule(currentleagueid, total_matchdays, total_games_per_mat
 			if matchday == 1 and game == 1 then
 				addr = getAddressWithVariableBytes(
 					memory.pack("u16", currentleagueid) .. "\x00\x00",
-					11,
-					"\xff" .. currentleagueid,
+					10,
+					"\xff" .. currentleagueid .. "\x00\x00\xff\xff\xf7",
 					startAddress
 				)
 				if addr then
