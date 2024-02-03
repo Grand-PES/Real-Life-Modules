@@ -661,10 +661,12 @@ local function getGamesOfCompUsingLoop(currentleagueid, type_byte, yearnow, tota
 					endAddress
 				)
 				if isDebugging then
-					log(memory.hex(addr))
 					log(memory.hex("\x00\x00" .. memory.pack("u16", currentleagueid) .. type_byte .. "\x20" .. yearnow))
 				end
 				if addr ~= nil then
+					if isDebugging then
+						log(memory.hex(addr))
+					end
 					fixtureNumberInterval = memory.unpack("u16", memory.read(addr - 2, 2))
 					table.insert(t[1], addr - 2)
 				else
