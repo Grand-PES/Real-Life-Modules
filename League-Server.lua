@@ -771,101 +771,6 @@ end
 --     return t
 -- end
 
-local function readMatchdays(dir)
-	local f = io.open(dir)
-	local firstLine = true
-	local t = {}
-	local headers = {}
-	log(dir)
-	if f then
-		for line in f:lines() do
-			if not string.match(line, ";") then
-				if firstLine then
-					for word in string.gmatch(line, "([^,]+)") do
-						table.insert(headers, word)
-					end
-					firstLine = false
-				else
-					local wordCounter = 1
-					for word in string.gmatch(line, "([^,]+)") do
-						local header = headers[wordCounter]
-						table.insert(t[header], word)
-						wordCounter = wordCounter + 1
-					end
-				end
-			end
-		end
-	end
-	return t
-end
-
-local function readTeamsMap(dir)
-	local t = {}
-	local f = io.open(dir)
-	log(dir)
-	if f then
-		for line in f:lines() do
-			if not string.match(line, ";") then
-				local id, name = line:match("([^,]+),([^,]+)")
-				if id and name then
-					t[name] = tonumber(id) or id
-					log(string.format("Team Name : %s Id : %s", name, id))
-				else
-					error("error reading mapteams")
-				end
-			end
-		end
-	end
-	return t
-end
-
-local function readCompsMap()
-	local dir = contentPath .. "\\map_competitions.txt"
-
-	local t = {}
-	local f = io.open(dir)
-	log(dir)
-	if f then
-		for line in f:lines() do
-			if not string.match(line, ";") then
-				local name, id = line:match("([^,]+)=([^,]+)")
-				if id and name then
-					if not t[id] then
-						local exits = io.open(contentPath .. name .. "\\config.ini")
-						if exits then
-							t[tonumber(id)] = name
-							log(string.format("Comp Name : %s Id : %s", name, id))
-						end
-					end
-				else
-					error("error reading mapteams")
-				end
-			end
-		end
-	end
-	return t
-end
-
-local function readLeagueConfig(dir)
-	local t = {}
-	local f = io.open(dir)
-	log(dir)
-	if f then
-		for line in f:lines() do
-			if not string.match(line, ";") then
-				local name, value = line:match("([^,]+)=([^,]+)")
-				if value and name then
-					t[name] = tonumber(value) or value
-					log(line)
-				else
-					error("error reading LeagueConfig")
-				end
-			end
-		end
-	end
-	return t
-end
-
 local function getFolders(path)
 	local t = {}
 	local command = string.format([[dir "%s" /b /ad]], path)
@@ -1024,6 +929,7 @@ function m.data_ready(ctx, filename)
 	if newml or newbl then
 		log("**Writing Started**")
 		local rlmLib = get_rlm_lib(ctx)
+		local pandas = ctx.external_files
 		local year = rlmLib.hook_year()
 		local position = memory.read(year - 3, 1)
 		local yearnow = rlmLib.current_season()
@@ -1046,14 +952,19 @@ function m.data_ready(ctx, filename)
 		if not tableIsEmpty(compsMap) then
 			local leagues_configs = {}
 			for i, compName in pairs(compsMap) do -- Load all league configs to return current league config easily
-				leagues_configs[i] = readLeagueConfig(contentPath .. string.format("\\%s\\", compName) .. "config.ini")
-				leagues_configs[i]["ID"] = {}
-				leagues_configs[i]["ID"].dec = i
-				leagues_configs[i]["ID"].hex = memory.pack("u16", i)
+				leagues_configs[i] = pandas.read_ini(contentPath .. string.format("\\%s\\", compName) .. "config.ini")
+				if leagues_configs[i] ~= nil then
+					leagues_configs[i]["NAME"] = compName
+					leagues_configs[i]["ID"] = {}
+					leagues_configs[i]["ID"].dec = i
+					leagues_configs[i]["ID"].hex = memory.pack("u16", i)
+				else
+					table.remove(leagues_configs)
+				end
 			end
 			-- local compName = compsMap[currentleagueid.dec]
-			for i, compName in pairs(compsMap) do
-				local configPath = contentPath .. string.format("\\%s\\", compName)
+			for i, config in pairs(leagues_configs) do
+				local configPath = contentPath .. string.format("\\%s\\", config["NAME"])
 				local existingYears = getFolders(configPath)
 				if tableIsEmpty(CalendarAddresses) then
 					for counter = 1, 365 do
@@ -1108,32 +1019,32 @@ function m.data_ready(ctx, filename)
 					end
 				end
 				if
-					(currentMonth == 1 and leagues_configs[i]["STARTS_IN_JAN"] == "true")
-					or ((currentMonth == 6 or currentMonth == 8) and leagues_configs[i]["STARTS_IN_JAN"] == "false")
+					(currentMonth == 1 and config["STARTS_IN_JAN"] == "true")
+					or ((currentMonth == 6 or currentMonth == 8) and config["STARTS_IN_JAN"] == "false")
 				then
 					local total_matchdays
 					local total_games_per_matchday
 					local typeByte
-					if leagues_configs[i]["TYPE"] == "cup" then
+					if config["TYPE"] == "cup" then
 						typeByte = "\x2e"
-					elseif leagues_configs[i]["TYPE"] == "supercup" then
+					elseif config["TYPE"] == "supercup" then
 						typeByte = "\x35"
 					else
 						typeByte = "\x00"
 					end
-					if leagues_configs[i]["TOTAL_MATCHDAYS"] ~= nil then
-						total_matchdays = leagues_configs[i]["TOTAL_MATCHDAYS"]
+					if config["TOTAL_MATCHDAYS"] ~= nil then
+						total_matchdays = config["TOTAL_MATCHDAYS"]
 					else
-						total_matchdays = leagues_configs[i]["TOTAL_TEAMS"] * 2 - 2
+						total_matchdays = config["TOTAL_TEAMS"] * 2 - 2
 					end
-					if leagues_configs[i]["TOTAL_GAMES_PER_MATCHDAY"] ~= nil then
-						total_games_per_matchday = leagues_configs[i]["TOTAL_GAMES_PER_MATCHDAY"]
+					if config["TOTAL_GAMES_PER_MATCHDAY"] ~= nil then
+						total_games_per_matchday = config["TOTAL_GAMES_PER_MATCHDAY"]
 					else
-						total_games_per_matchday = leagues_configs[i]["TOTAL_TEAMS"] / 2
+						total_games_per_matchday = config["TOTAL_TEAMS"] / 2
 					end
 					local hasCustom = existingYears[tostring(yearnow.dec)]
-					local needGeneric = leagues_configs[i]["NEEDS_GENERIC"] == "true"
-					gamesSchedule = getSchedule(i, leagues_configs[i], total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
+					local needGeneric = config["NEEDS_GENERIC"] == "true"
+					gamesSchedule = getSchedule(i, config, total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
 					if needGeneric then
 						matchdays =
 							getGamesOfCompUsingLoop(i, typeByte, "\xff\xff", total_matchdays, total_games_per_matchday)
@@ -1144,8 +1055,8 @@ function m.data_ready(ctx, filename)
 					if not tableIsEmpty(matchdays) or not tableIsEmpty(gamesSchedule) then
 						if hasCustom then -- custom edit based on year
 							local mapsPath = configPath .. tostring(yearnow.dec)
-							teamNamestoIDs = readTeamsMap(mapsPath .. "\\map_team.txt")
-							customMatchdaysData = readMatchdays(mapsPath .. "\\map_matchdays.txt")
+							teamNamestoIDs = pandas.read_num_text_map(mapsPath .. "\\map_team.txt")
+							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.txt")
 
 							teamIDsToHex = gamedayToTeamIDs(matchdays[1])
 							for n = 1, #customMatchdaysData["FixtureNumber"] do
@@ -1164,7 +1075,7 @@ function m.data_ready(ctx, filename)
 								local matchStartTime = tonumber(customMatchdaysData["Time"][n])
 								local homeTeam = customMatchdaysData["HomeT"][n]
 								local awayTeam = customMatchdaysData["AwayT"][n]
-								if leagues_configs[i]["STARTS_IN_JAN"] == "false" then
+								if config["STARTS_IN_JAN"] == "false" then
 									if to_month <= 6 then
 										startingYear = secondYear
 									end
@@ -1173,7 +1084,7 @@ function m.data_ready(ctx, filename)
 									"u16",
 									fixtureNumber
 										- 1
-										+ (leagues_configs[i]["TOTAL_TEAMS"] / 2) * (gameweekNumber - 1)
+										+ (config["TOTAL_TEAMS"] / 2) * (gameweekNumber - 1)
 										+ fixtureNumberInterval
 								)
 								local sum = memory.unpack("u8", memory.read(Schedule[to_total_days], 1)) + 1
@@ -1259,7 +1170,7 @@ function m.data_ready(ctx, filename)
 										local game_type_hex = "\x02\x00"
 
 										memory.write(CalendarAddresses[to_total_days], fixNoHex) -- C8 00 Matchday ID
-										memory.write(CalendarAddresses[to_total_days] + 2, leagues_configs[i]["ID"].hex) -- 11 00 League ID
+										memory.write(CalendarAddresses[to_total_days] + 2, config["ID"].hex) -- 11 00 League ID
 										memory.write(
 											CalendarAddresses[to_total_days] + 4,
 											memory.pack("u16", gameweekNumber - 1)
@@ -1285,7 +1196,7 @@ function m.data_ready(ctx, filename)
 								-- only needs dates set
 								log("applying generic schedule")
 								setGenericSchedule(
-									leagues_configs[i],
+									config,
 									yearnow.dec,
 									i == currentleagueid.dec,
 									total_matchdays,
@@ -1300,7 +1211,7 @@ function m.data_ready(ctx, filename)
 						log("review logs")
 					end
 				else
-					log(string.format("skipping %s, already set before or not supposed to be set yet", compName))
+					log(string.format("skipping %s, already set before or not supposed to be set yet", config["NAME"]))
 				end
 				-- else
 				--     log("league is not in content folder, nothing has changed")
@@ -1321,7 +1232,7 @@ function m.init(ctx)
 		contentPath = ctx.sider_dir .. contentPath
 	end
 	m.dispose()
-	compsMap = readCompsMap()
+	compsMap = ctx.external_files.read_text_num_map(contentPath .. "\\map_competitions.txt")
 	ctx.register("livecpk_data_ready", m.data_ready)
 end
 
