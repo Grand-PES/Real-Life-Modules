@@ -696,26 +696,31 @@ local function getGamesOfCompUsingLoop(currentleagueid, type_byte, yearnow, tota
 	return t
 end
 
-local function getSchedule(currentleagueid, total_matchdays, total_games_per_matchday)
+local function getSchedule(currentCompId, compType, total_matchdays, total_games_per_matchday)
 	local t = {}
 	local addr
+	local compIdHex = memory.pack("u16", currentCompId)
 	for matchday = 1, total_matchdays do
 		t[matchday] = {}
 		for game = 1, total_games_per_matchday do
 			if matchday == 1 and game == 1 then
-				addr = getAddressWithVariableBytes(
-					memory.pack("u16", currentleagueid) .. "\x00\x00",
-					10,
-					"\xff\xff" .. memory.pack("u16", currentleagueid) .. "\x00\x00\xff\xff\xf7\x07",
-					startAddress
-				)
+				if compType == "cup" then
+					addr = getAddressWithVariableBytes(
+						compIdHex .. "\x00\x00",
+						10,
+						"\xff\xff" .. compIdHex .. "\x6E\x00" .. compIdHex .. "\x2f\x00\xff\xff",
+						startAddress
+					)
+				else
+					addr = getAddressWithVariableBytes(compIdHex .. "\x00\x00", 11, "\xff" .. compIdHex, startAddress)
+				end
 				if addr then
 					table.insert(t[1], addr - 6)
 				else
 					log(
 						string.format(
 							"gamesSchedule: matchday 1 game 1 wasn't found for %s, skipping...",
-							currentleagueid
+							currentCompId
 						)
 					)
 					return {}
@@ -1128,7 +1133,7 @@ function m.data_ready(ctx, filename)
 					end
 					local hasCustom = existingYears[tostring(yearnow.dec)]
 					local needGeneric = leagues_configs[i]["NEEDS_GENERIC"] == "true"
-					gamesSchedule = getSchedule(i, total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
+					gamesSchedule = getSchedule(i, leagues_configs[i], total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
 					if needGeneric then
 						matchdays =
 							getGamesOfCompUsingLoop(i, typeByte, "\xff\xff", total_matchdays, total_games_per_matchday)
