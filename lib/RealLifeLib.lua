@@ -6,9 +6,9 @@
 -- helper methods/members
 -- #########################################################
 local startAddress = 0x00007FF4D0000000
-local endAddress = 0x00007FF4DFFFFFFF
-local tablestartAddress = 0x00007FF490000000
-local tableendAddress = 0x00007FF4FFFFFFFF
+local endAddress = 0x00007FF4DFFFFFF0
+local tablestartAddress = 0x00007FF4F0000000
+local tableendAddress = 0x00007FF4FFFFFFF0
 
 local function hex_to_number(addr)
 	return tonumber(string.match(tostring(addr), "0x%x+"))
