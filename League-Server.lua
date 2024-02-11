@@ -712,7 +712,12 @@ local function getSchedule(currentCompId, compType, total_matchdays, total_games
 						startAddress
 					)
 				else
-					addr = getAddressWithVariableBytes(compIdHex .. "\x00\x00", 11, "\xff" .. compIdHex, startAddress)
+					addr = getAddressWithVariableBytes(
+						compIdHex .. "\x00\x00",
+						10,
+						"\xff\xff" .. compIdHex .. "\x00\x00\xff\xff\xf7\x07",
+						startAddress
+					)
 				end
 				if addr then
 					table.insert(t[1], addr - 6)
