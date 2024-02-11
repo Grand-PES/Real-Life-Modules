@@ -55,12 +55,10 @@ end
 
 function m.hook_season()
 	if not m.season_addr then
-		m.season_addr = hex_to_number(
-			memory.safe_search(
-				"\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x00\x00\x11\x00\x00",
-				startAddress,
-				endAddress
-			)
+		m.season_addr = memory.safe_search(
+			"\x01\x00\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01\x00\x00\x00\x01",
+			startAddress,
+			endAddress
 		)
 	end
 	return m.season_addr
@@ -124,7 +122,7 @@ end
 
 function m.current_season()
 	local t = {}
-	t.hex = memory.read(m.hook_season() + 24, 2) or 0
+	t.hex = memory.read(m.hook_season() - 3, 2) or 0
 	t.dec = memory.unpack("u16", t.hex) or 0
 	return t
 end
