@@ -1049,7 +1049,7 @@ function m.data_ready(ctx, filename)
 					end
 					local hasCustom = existingYears[tostring(yearnow.dec)]
 					local needGeneric = config["NEEDS_GENERIC"] == "true"
-					gamesSchedule = getSchedule(i, config, total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
+					gamesSchedule = getSchedule(i, config["TYPE"], total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
 					if needGeneric then
 						matchdays =
 							getGamesOfCompUsingLoop(i, typeByte, "\xff\xff", total_matchdays, total_games_per_matchday)
