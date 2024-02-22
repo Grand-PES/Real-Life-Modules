@@ -14,6 +14,36 @@ local function hex_to_number(addr)
 	return tonumber(string.match(tostring(addr), "0x%x+"))
 end
 
+local function getAddressWithVariableBytesUsingStart(
+	addrBeginning,
+	variableByteLength,
+	addrEndning,
+	variableStartAddress
+)
+	local addr = memory.safe_search(addrBeginning, variableStartAddress, endAddress)
+	if addr then
+		if memory.read(addr + #addrBeginning + variableByteLength, #addrEndning) == addrEndning then
+			return addr
+		else
+			return getAddressWithVariableBytesUsingStart(
+				addrBeginning,
+				variableByteLength,
+				addrEndning,
+				addr + #addrBeginning
+			)
+		end
+	else
+		return nil
+	end
+end
+
+local function tableIsEmpty(self)
+	for _, _ in pairs(self) do
+		return false
+	end
+	return true
+end
+
 local function team_hex_to_dec(teamHex)
 	function getBits(num)
 		local x = {}
@@ -45,6 +75,8 @@ m.year_addr = nil
 m.season_addr = nil
 m.champion_addr = nil
 m.leagues_champions = {}
+m.tables_addrs = {}
+m.comps_tables = {}
 
 function m.hook_year()
 	if not m.year_addr then
@@ -62,6 +94,30 @@ function m.hook_season()
 		)
 	end
 	return m.season_addr
+end
+
+function m.hook_table(tid)
+	if m.tables_addrs[tid.dec] == nil then
+		m.tables_addrs[tid.dec] =
+			getAddressWithVariableBytesUsingStart("\x64\xC8\x00" .. tid.hex, 771, "\xC9", startAddress)
+	end
+	return m.tables_addrs[tid.dec]
+end
+
+function m.comp_table(tid, no_of_teams)
+	if tableIsEmpty(m.comps_tables[tid.dec]) then
+		m.comps_tables[tid.dec] = {}
+		local addr = m.hook_table(tid)
+		if addr then
+			for i = 1, no_of_teams do
+				m.comps_tables[tid.dec][i].hex = memory.read(addr + i * 4 + 367, 4)
+				m.comps_tables[tid.dec][i].dec = team_hex_to_dec(m.comps_tables[tid.dec][i].hex)
+			end
+		else
+			return nil
+		end
+	end
+	return m.comps_tables[tid.dec]
 end
 
 function m.hook_champion(tid)

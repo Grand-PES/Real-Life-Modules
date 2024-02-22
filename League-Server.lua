@@ -608,6 +608,14 @@ local function gamedayToTeamIDs(matchday)
 	return t
 end
 
+local function tableToTeamIDs(table)
+	local t = {}
+	for n = 1, #table do
+		t[table[n].dec] = table[n].hex
+	end
+	return t
+end
+
 local function getAddressWithVariableBytes(addrBeginning, variableByteLength, addrEndning, variableStartAddress)
 	local addr = memory.safe_search(addrEndning, variableStartAddress, endAddress)
 	if addr then
@@ -1063,7 +1071,7 @@ function m.data_ready(ctx, filename)
 							teamNamestoIDs = pandas.read_num_text_map(mapsPath .. "\\map_team.txt")
 							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.txt")
 
-							teamIDsToHex = gamedayToTeamIDs(matchdays[1])
+							teamIDsToHex = tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"]))
 							for n = 1, #customMatchdaysData["FixtureNumber"] do
 								local from_total_days
 								if not needGeneric then
