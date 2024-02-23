@@ -9,6 +9,7 @@ local startAddress = 0x00007FF4D0000000
 local endAddress = 0x00007FF4EFFFFFF0
 local hexPat = "0x%x+"
 local BlankDate = "\xff\xff\xff\xff\x37\x00\x00\x00\x03\x00\x00\x00\xff\xff\xff\xff"
+local _empty = {}
 local genericSchedule = {
 	[2] = {
 		["Jan"] = {
