@@ -432,9 +432,10 @@ function m.data_ready(ctx, filename)
 	local loadml = string.match(filename, "common\\script\\flow\\ML\\MLCoachCapturePostLoad.json") --common\\script\\flow\\ML\\MLMainManu.json
 	local updateday = string.match(filename, "common\\script\\flow\\ML\\MLMainManu.json") -- common\\script\\flow\\Common\\CmnScheduleProcess.json
 	local rlmLib = get_rlm_lib(ctx)
-	local year = rlmLib.hook_year()
+	local year
 
 	if updateday then
+		year = rlmLib.hook_year()
 		currentMonth = memory.unpack("u8", memory.read(year + 7, 1))
 		currentDay = memory.unpack("u8", memory.read(year + 8, 1))
 		midjan = (currentMonth == 7 and currentDay == 1)
@@ -444,6 +445,7 @@ function m.data_ready(ctx, filename)
 	end
 
 	if newml or newbl then --or (midjune and updateday) or (midjan and updateday)
+		year = rlmLib.hook_year()
 		log("**Writing Started**")
 		local pandas = ctx.external_files
 		local position = memory.read(year - 3, 1)
