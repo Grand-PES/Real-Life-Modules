@@ -570,7 +570,8 @@ function m.data_ready(ctx, filename)
 							teamNamestoIDs = pandas.read_num_text_map(mapsPath .. "\\map_team.txt")
 							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.txt")
 
-							teamIDsToHex = tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"]))
+							teamIDsToHex =
+								tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"])["current"])
 							for n = 1, #customMatchdaysData["FixtureNumber"] do
 								local from_total_days
 								if not isGeneric then
