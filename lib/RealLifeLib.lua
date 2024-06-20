@@ -185,6 +185,13 @@ function m.current_season()
 	return t
 end
 
+function m.pack_id(encode, decimal)
+	return {
+		["dec"] = decimal,
+		["hex"] = memory.pack(encode, decimal),
+	}
+end
+
 -- function m.current_EPL_champion()
 -- local t = {}
 -- t.hex = memory.read(m.hook_champion(17) + 792, 4) or 0
