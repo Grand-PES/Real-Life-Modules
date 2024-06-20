@@ -4,6 +4,10 @@
 
 local m = { version = "v3.4" }
 
+-- Constants
+local hexPat = "0x%x+"
+local seasonchange
+-- Variables
 local map
 local map_count
 local team_map
@@ -18,11 +22,7 @@ local badge_patch_map
 local messages = {}
 local frame_count = 0
 
--- Constants
-local hexPat = "0x%x+"
-local seasonchange
--- Variables
-
+local badge_of_honor_teams
 local reload_button = {
 	vkey = 0x30,
 	label = "[0]",
@@ -499,6 +499,26 @@ end
 function m.set_home_team_for_kits(ctx, team_id, is_edit_mode)
 	if is_edit_mode then
 		set_patches(ctx, team_id, true)
+	end
+end
+
+local function badge_of_honor(team_id, comp)
+	if not badge_of_honor_teams[comp] then
+		badge_of_honor_teams[comp] = load_map(DIRECTORY_TBD)
+	end
+	return badge_of_honor_teams[comp][team_id] -- returns string, load_map default
+end
+
+local function add_new_winner(ctx, comp, current_year)
+	if not badge_of_honor_teams[comp] then
+		badge_of_honor_teams[comp] = load_map(DIRECTORY_TBD)
+	end
+	local tid = get_rlm_lib(ctx).pack_id(comp)
+	local winner = get_rlm_lib(ctx).old_comp_table(tid, 1, current_year)[1].dec
+	if not badge_of_honor_teams[comp][winner] then
+		badge_of_honor_teams[comp][winner] = 1 -- first time winner
+	else
+		badge_of_honor_teams[comp][winner] = badge_of_honor_teams[comp][winner] + 1
 	end
 end
 
