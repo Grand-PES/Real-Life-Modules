@@ -186,10 +186,16 @@ function m.current_season()
 end
 
 function m.pack_id(encode, decimal)
-	return {
-		["dec"] = decimal,
-		["hex"] = memory.pack(encode, decimal),
-	}
+	if type(decimal) == "table" then
+		return decimal
+	elseif type(decimal) == "string" or type(decimal) == "number" then
+		return {
+			["dec"] = tonumber(decimal),
+			["hex"] = memory.pack(encode, decimal),
+		}
+	else
+		log("unknown type of 'decimal'")
+	end
 end
 
 -- function m.current_EPL_champion()
