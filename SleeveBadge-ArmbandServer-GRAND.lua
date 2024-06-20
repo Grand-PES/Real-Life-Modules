@@ -513,7 +513,7 @@ local function add_new_winner(ctx, comp, current_year)
 	if not badge_of_honor_teams[comp] then
 		badge_of_honor_teams[comp] = load_map(DIRECTORY_TBD)
 	end
-	local tid = get_rlm_lib(ctx).pack_id(comp)
+	local tid = get_rlm_lib(ctx).pack_id("u16", comp)
 	local winner = get_rlm_lib(ctx).old_comp_table(tid, 1, current_year)[1].dec
 	if not badge_of_honor_teams[comp][winner] then
 		badge_of_honor_teams[comp][winner] = 1 -- first time winner
