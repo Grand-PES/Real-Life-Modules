@@ -1,0 +1,11 @@
+; Fixture Number,Competition Gameweek,FromDate,ToDate,Night(0 is false),Time(Format Yet to be confirmed),Home Team,Away Team
+1,1,8/22,9/12, , ,Fulham,Arsenal
+2,1,8/22,9/12, , ,Crystal_Palace,Southampton
+3,1,8/22,9/12, , ,Liverpool,Leeds_United
+4,1,8/22,9/12, , ,West_Ham_United,Newcastle_United
+5,1,8/22,9/13, , ,West_Bromwich_Albion,Leicester_City
+6,1,8/22,9/13, , ,Tottenham_Hotspur,Everton
+7,1,8/22,9/14, , ,Sheffield_United,Wolverhampton_Wanderers
+8,1,8/22,9/14, , ,Brighton_and_Hove_Albion,Chelsea
+9,1,8/22,1/12, , ,Burnley,Manchester_United
+10,1,8/22,1/20, , ,Manchester_City,Aston_Villa

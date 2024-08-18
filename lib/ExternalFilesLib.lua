@@ -25,6 +25,7 @@ function m.read_csv(dir)
 				if firstLine then
 					for word in string.gmatch(line, "([^,]+)") do
 						table.insert(headers, word)
+						t[word] = {}
 					end
 					firstLine = false
 				else
