@@ -38,8 +38,10 @@ local function getAddressWithVariableBytesUsingStart(
 end
 
 local function tableIsEmpty(self)
-	for _, _ in pairs(self) do
-		return false
+	if self then
+		for _, _ in pairs(self) do
+			return false
+		end
 	end
 	return true
 end
@@ -97,28 +99,40 @@ function m.hook_season()
 	return m.season_addr
 end
 
-function m.hook_table(tid)
-	if m.tables_addrs[tid.dec] == nil then
-		m.tables_addrs[tid.dec] =
-			getAddressWithVariableBytesUsingStart("\x64\xC8\x00" .. tid.hex, 771, "\xC9", startAddress)
+function m.hook_table(tid, year)
+	if year == "current" then
+		if m.tables_addrs[tid.dec] == nil then
+			m.tables_addrs[tid.dec] =
+				getAddressWithVariableBytesUsingStart("\x64\xC8\x00" .. tid.hex, 771, "\xC9", startAddress)
+		end
+		return m.tables_addrs[tid.dec]
+	else
+		if not m.old_tables_addrs[tid.dec] then
+			m.old_tables_addrs[tid.dec] =
+				memory.safe_search(tid.hex .. memory.pack("u16", year) .. tid.hex, tablestartAddress, tableendAddress)
+		end
+		return m.old_tables_addrs[tid.dec]
 	end
-	return m.tables_addrs[tid.dec]
 end
 
-function m.comp_table(tid, no_of_teams)
-	if tableIsEmpty(m.comps_tables[tid.dec]["current"]) then
-		m.comps_tables[tid.dec]["current"] = {}
+function m.comp_table(tid, no_of_teams, year)
+	if tableIsEmpty(m.comps_tables[tid.dec]) then
+		m.comps_tables[tid.dec] = {}
+	end
+	if tableIsEmpty(m.comps_tables[tid.dec][year]) then
+		m.comps_tables[tid.dec][year] = {}
 		local addr = m.hook_table(tid)
 		if addr then
 			for i = 1, no_of_teams do
-				m.comps_tables[tid.dec]["current"][i].hex = memory.read(addr + i * 4 + 367, 4)
-				m.comps_tables[tid.dec]["current"][i].dec = team_hex_to_dec(m.comps_tables[tid.dec]["current"][i].hex)
+				m.comps_tables[tid.dec][year][i] = {}
+				m.comps_tables[tid.dec][year][i].hex = memory.read(addr + i * 4 + 367, 4)
+				m.comps_tables[tid.dec][year][i].dec = team_hex_to_dec(m.comps_tables[tid.dec][year][i].hex)
 			end
 		else
 			return nil
 		end
 	end
-	return m.comps_tables[tid.dec]
+	return m.comps_tables[tid.dec][year]
 end
 
 function m.hook_champion(tid)
@@ -130,30 +144,6 @@ function m.hook_champion(tid)
 		)
 	end
 	return m.champion_addrs[tid.dec]
-end
-
-function m.hook_old_table(tid, year)
-	if not m.old_tables_addrs[tid.dec] then
-		m.old_tables_addrs[tid.dec] =
-			memory.safe_search(tid.hex .. memory.pack("u16", year) .. tid.hex, tablestartAddress, tableendAddress)
-	end
-	return m.old_tables_addrs[tid.dec]
-end
-
-function m.old_comp_table(tid, no_of_teams, year)
-	if tableIsEmpty(m.comps_tables[tid.dec][year]) then
-		m.comps_tables[tid.dec][year] = {}
-		local addr = m.hook_old_table(tid, year)
-		if addr then
-			for i = 1, no_of_teams do
-				m.comps_tables[tid.dec][year][i].hex = memory.read(addr + i * 4 + 367, 4)
-				m.comps_tables[tid.dec][year][i].dec = team_hex_to_dec(m.comps_tables[tid.dec][year][i].hex)
-			end
-		else
-			return nil
-		end
-	end
-	return m.comps_tables[tid.dec]
 end
 
 function m.league_champion(tid)

@@ -99,6 +99,7 @@ local function tableToTeamIDs(table)
 	local t = {}
 	for n = 1, #table do
 		t[table[n].dec] = table[n].hex
+		log(string.format("plz %d %s", table[n].dec, memory.hex(table[n].hex)))
 	end
 	return t
 end
@@ -536,7 +537,7 @@ function m.data_ready(ctx, filename)
 				end
 				if
 					(currentMonth == 1 and config["STARTS_IN_JAN"] == "true")
-					or ((currentMonth == 6 or currentMonth == 7) and config["STARTS_IN_JAN"] == "false")
+					or ((currentMonth == 6 or currentMonth == 8) and config["STARTS_IN_JAN"] == "false")
 				then
 					local total_matchdays = config["TOTAL_TEAMS"] * 2 - 2
 					local total_games_per_matchday = config["TOTAL_TEAMS"] / 2
@@ -570,38 +571,42 @@ function m.data_ready(ctx, filename)
 							teamNamestoIDs = pandas.read_num_text_map(mapsPath .. "\\map_team.txt")
 							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.txt")
 
-							teamIDsToHex =
-								tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"])["current"])
-							for n = 1, #customMatchdaysData["FixtureNumber"] do
+							-- teamIDsToHex =
+							-- 	tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"], "current"))
+							teamIDsToHex = gamedayToTeamIDs(matchdays[1])
+							for n = 1, #customMatchdaysData do
+								for head, key in pairs(customMatchdaysData[n]) do
+									log(string.format("find me bitch %s:%s", head, key))
+								end
 								local from_total_days
 								if not isGeneric then
-									from_total_days = date_to_totaldays(customMatchdaysData["FromDate"][n])
+									from_total_days = date_to_totaldays(customMatchdaysData[n]["FromDate"])
 								end
 								local to_month, to_day
 								local to_total_days
-								if customMatchdaysData["ToDate"] then
-									local mon, day = customMatchdaysData["ToDate"][n]:match("(%d+)/(%d+)")
+								if customMatchdaysData[n]["ToDate"] then
+									local mon, day = customMatchdaysData[n]["ToDate"]:match("(%d+)/(%d+)")
 									to_month, to_day = tonumber(mon), tonumber(day)
-									to_total_days = date_to_totaldays(customMatchdaysData["ToDate"][n])
+									to_total_days = date_to_totaldays(customMatchdaysData[n]["ToDate"])
 								end
 								-- fixture and gameweek number is a must
-								local fixtureNumber = tonumber(customMatchdaysData["FixtureNumber"][n])
-								local gameweekNumber = tonumber(customMatchdaysData["CompetitionGameweek"][n])
+								local fixtureNumber = tonumber(customMatchdaysData[n]["FixtureNumber"])
+								local gameweekNumber = tonumber(customMatchdaysData[n]["CompetitionGameweek"])
 								local isNight
-								if customMatchdaysData["isNight"] then
-									isNight = tonumber(customMatchdaysData["isNight"][n])
+								if customMatchdaysData[n]["isNight"] then
+									isNight = tonumber(customMatchdaysData[n]["isNight"])
 								end
 								local matchStartTime
-								if customMatchdaysData["Time"] then
-									matchStartTime = tonumber(customMatchdaysData["Time"][n])
+								if customMatchdaysData[n]["Time"] then
+									matchStartTime = tonumber(customMatchdaysData[n]["Time"])
 								end
 								local homeTeam
-								if customMatchdaysData["HomeT"] then
-									homeTeam = customMatchdaysData["HomeT"][n]
+								if customMatchdaysData[n]["HomeT"] then
+									homeTeam = customMatchdaysData[n]["HomeT"]
 								end
 								local awayTeam
-								if customMatchdaysData["AwayT"] then
-									awayTeam = customMatchdaysData["AwayT"][n]
+								if customMatchdaysData[n]["AwayT"] then
+									awayTeam = customMatchdaysData[n]["AwayT"]
 								end
 								local startingYear = yearnow.dec
 								if config["STARTS_IN_JAN"] == "false" then
@@ -634,7 +639,7 @@ function m.data_ready(ctx, filename)
 						log("review logs")
 					end
 				else
-					log(string.format("skipping %s, already set before or not supposed to be set yet", config["NAME"]))
+					log(string.format("skipping %s, league starts in jan? %s", config["NAME"], config["STARTS_IN_JAN"]))
 				end
 				-- else
 				--     log("league is not in content folder, nothing has changed")

@@ -24,19 +24,22 @@ function m.read_csv(dir)
 			if not string.match(line, ";") then
 				if firstLine then
 					for word in string.gmatch(line, "([^,]+)") do
-						table.insert(headers, word)
+						table.insert(headers, word:match("[A-Za-z%d]+"))
 					end
 					firstLine = false
 				else
+					local row = {}
 					local wordCounter = 1
 					for word in string.gmatch(line, "([^,]+)") do
 						local header = headers[wordCounter]
-						table.insert(t[header], word)
+						row[header] = word
 						wordCounter = wordCounter + 1
 					end
+					table.insert(t, row)
 				end
 			end
 		end
+		f:close()
 		return t
 	else
 		return nil
@@ -57,6 +60,7 @@ function m.read_num_text_map(dir)
 				end
 			end
 		end
+		f:close()
 		return t
 	else
 		return nil
@@ -79,6 +83,7 @@ function m.read_text_num_map(dir)
 				end
 			end
 		end
+		f:close()
 		return t
 	else
 		return nil
@@ -99,6 +104,7 @@ function m.read_ini(dir)
 				end
 			end
 		end
+		f:close()
 		return t
 	else
 		return nil
