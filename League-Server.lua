@@ -18,8 +18,7 @@ local CalendarAddresses = {}
 local Schedule = {}
 local gamesSchedule = {}
 local matchdays = {}
-local teamIDsToHex = {}
-local teamNamestoIDs = {}
+local teamNamestoHex = {}
 local customMatchdaysData = {}
 local fixtureNumberInterval = 0
 -- Config
@@ -32,8 +31,7 @@ function m.dispose()
 	Schedule = {}
 	gamesSchedule = {}
 	matchdays = {}
-	teamIDsToHex = {}
-	teamNamestoIDs = {}
+	teamNamestoHex = {}
 	customMatchdaysData = {}
 	collectgarbage()
 end
@@ -102,6 +100,33 @@ local function tableToTeamIDs(table)
 	for n = 1, #table do
 		t[table[n].dec] = table[n].hex
 		log(string.format("plz %d %s", table[n].dec, memory.hex(table[n].hex)))
+	end
+	return t
+end
+
+local function mapTeamIDs(teamIDs, namesMap)
+	local t = {}
+	-- loop 1: match available ids and leave unavailable untouched
+	for name, id in pairs(namesMap) do
+		if teamIDs[id] then -- available
+			log(string.format("found %s id: %d", name, id))
+			t[name] = teamIDs[id]
+			teamIDs[id] = nil
+			namesMap[name] = nil
+		end
+	end
+	-- loop 2: match unavailable ids
+	for name, id in pairs(namesMap) do
+		if id then -- unavailable
+			for newId, hex in pairs(teamIDs) do
+				if hex then
+					log(string.format("matched %s old: %d new: %d", name, id, newId))
+					t[name] = hex
+					teamIDs[newId] = nil
+					break
+				end
+			end
+		end
 	end
 	return t
 end
@@ -352,12 +377,12 @@ local function writeGame(
 		memory.write(gameAddress + 16, memory.pack("u16", matchStartTime))
 	end
 	if homeTeam then
-		memory.write(gameAddress + 20, teamIDsToHex[teamNamestoIDs[homeTeam]])
-		memory.write(matchdaySchedule + 10, teamIDsToHex[teamNamestoIDs[homeTeam]])
+		memory.write(gameAddress + 20, teamNamestoHex[homeTeam])
+		memory.write(matchdaySchedule + 10, teamNamestoHex[homeTeam])
 	end
 	if awayTeam then
-		memory.write(gameAddress + 24, teamIDsToHex[teamNamestoIDs[awayTeam]])
-		memory.write(matchdaySchedule + 14, teamIDsToHex[teamNamestoIDs[awayTeam]])
+		memory.write(gameAddress + 24, teamNamestoHex[awayTeam])
+		memory.write(matchdaySchedule + 14, teamNamestoHex[awayTeam])
 	end
 
 	if to_total_days and to_month and to_day then
@@ -377,7 +402,7 @@ local function writeGame(
 		end
 		-- Stop or Skip
 		if isCurrentTeamInLeague then
-			if mlteamnow.dec == teamNamestoIDs[homeTeam] or mlteamnow.dec == teamNamestoIDs[awayTeam] then
+			if mlteamnow.hex == teamNamestoHex[homeTeam] or mlteamnow.hex == teamNamestoHex[awayTeam] then
 				log("currunt match has current team")
 				-- Stop
 				memory.write(Schedule[to_total_days] + 7, "\x00")
@@ -569,12 +594,13 @@ function m.data_ready(ctx, filename)
 					if not tableIsEmpty(matchdays) or not tableIsEmpty(gamesSchedule) then
 						if hasCustom then -- custom edit based on year
 							local mapsPath = configPath .. hasCustom
-							teamNamestoIDs = pandas.read_num_text_map(mapsPath .. "\\map_team.txt")
 							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.txt")
 
-							-- teamIDsToHex =
-							-- tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"], "current"))
-							teamIDsToHex = gamedayToTeamIDs(matchdays[1])
+							teamNamestoHex = mapTeamIDs(
+								gamedayToTeamIDs(matchdays[1]),
+								-- tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"], "current")),
+								pandas.read_num_text_map(mapsPath .. "\\map_team.txt")
+							)
 							for n = 1, #customMatchdaysData do
 								local from_total_days
 								if not isGeneric then
