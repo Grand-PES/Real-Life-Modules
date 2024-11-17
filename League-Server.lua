@@ -23,7 +23,7 @@ local teamNamestoIDs = {}
 local customMatchdaysData = {}
 local fixtureNumberInterval = 0
 -- Config
-local isDebugging = true
+local isDebugging = false
 -- local changeDate = false
 
 function m.dispose()
@@ -34,6 +34,8 @@ function m.dispose()
 	matchdays = {}
 	teamIDsToHex = {}
 	teamNamestoIDs = {}
+	customMatchdaysData = {}
+	collectgarbage()
 end
 
 local function get_rlm_lib(ctx)
@@ -375,7 +377,6 @@ local function writeGame(
 		end
 		-- Stop or Skip
 		if isCurrentTeamInLeague then
-			log("current team is in current league")
 			if mlteamnow.dec == teamNamestoIDs[homeTeam] or mlteamnow.dec == teamNamestoIDs[awayTeam] then
 				log("currunt match has current team")
 				-- Stop
@@ -572,12 +573,9 @@ function m.data_ready(ctx, filename)
 							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.txt")
 
 							-- teamIDsToHex =
-							-- 	tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"], "current"))
+							-- tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"], "current"))
 							teamIDsToHex = gamedayToTeamIDs(matchdays[1])
 							for n = 1, #customMatchdaysData do
-								for head, key in pairs(customMatchdaysData[n]) do
-									log(string.format("find me bitch %s:%s", head, key))
-								end
 								local from_total_days
 								if not isGeneric then
 									from_total_days = date_to_totaldays(customMatchdaysData[n]["FromDate"])

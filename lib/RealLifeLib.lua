@@ -120,9 +120,10 @@ function m.comp_table(tid, no_of_teams, year)
 		m.comps_tables[tid.dec] = {}
 	end
 	if tableIsEmpty(m.comps_tables[tid.dec][year]) then
-		m.comps_tables[tid.dec][year] = {}
-		local addr = m.hook_table(tid)
+		local addr = m.hook_table(tid, year)
 		if addr then
+			log("yes it is")
+			m.comps_tables[tid.dec][year] = {}
 			for i = 1, no_of_teams do
 				m.comps_tables[tid.dec][year][i] = {}
 				m.comps_tables[tid.dec][year][i].hex = memory.read(addr + i * 4 + 367, 4)
@@ -188,6 +189,17 @@ function m.pack_id(encode, decimal)
 	end
 end
 
+function m.dispose()
+	m.year_addr = nil
+	m.season_addr = nil
+	m.champion_addrs = {}
+	m.leagues_champions = {}
+	m.tables_addrs = {}
+	m.old_tables_addrs = {}
+	m.comps_tables = {}
+	collectgarbage()
+end
+
 -- function m.current_EPL_champion()
 -- local t = {}
 -- t.hex = memory.read(m.hook_champion(17) + 792, 4) or 0
@@ -210,6 +222,7 @@ end
 -- end
 
 function m.init(ctx)
+	m.dispose()
 	ctx.real_life_mode = m
 end
 
