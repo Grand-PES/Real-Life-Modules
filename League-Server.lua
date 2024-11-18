@@ -299,17 +299,6 @@ end
 --     return t
 -- end
 
-local function getFolders(path)
-	local t = {}
-	local command = string.format([[dir "%s" /b /ad]], path)
-
-	for dir in io.popen(command):lines() do
-		t[dir] = dir
-	end
-
-	return t
-end
-
 local function tableIsEmpty(self)
 	for _, _ in pairs(self) do
 		return false
@@ -508,7 +497,7 @@ function m.data_ready(ctx, filename)
 			-- local compName = compsMap[currentleagueid.dec]
 			for i, config in pairs(leagues_configs) do
 				local configPath = contentPath .. string.format("\\%s\\", config["NAME"])
-				local existingYears = getFolders(configPath)
+				local existingYears = pandas.read_text(configPath .. "\\years.txt")
 				if tableIsEmpty(CalendarAddresses) then
 					for counter = 1, 365 do
 						if isDebugging then
@@ -581,7 +570,7 @@ function m.data_ready(ctx, filename)
 					if config["TOTAL_GAMES_PER_MATCHDAY"] ~= nil then
 						total_games_per_matchday = config["TOTAL_GAMES_PER_MATCHDAY"]
 					end
-					local hasCustom = existingYears[tostring(yearnow.dec)] or existingYears["Default"]
+					local hasCustom = existingYears[tostring(yearnow.dec)] or config["DEFAULT_MAP"]
 					local isGeneric = config["IS_GENERIC"] == "true"
 					gamesSchedule = getSchedule(i, config["TYPE"], total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
 					if isGeneric then
@@ -594,12 +583,12 @@ function m.data_ready(ctx, filename)
 					if not tableIsEmpty(matchdays) or not tableIsEmpty(gamesSchedule) then
 						if hasCustom then -- custom edit based on year
 							local mapsPath = configPath .. hasCustom
-							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.txt")
+							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.csv")
 
 							teamNamestoHex = mapTeamIDs(
 								gamedayToTeamIDs(matchdays[1]),
 								-- tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"], "current")),
-								pandas.read_num_text_map(mapsPath .. "\\map_team.txt")
+								pandas.read_num_text_map(mapsPath .. "\\map_team.csv")
 							)
 							for n = 1, #customMatchdaysData do
 								local from_total_days

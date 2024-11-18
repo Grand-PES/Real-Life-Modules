@@ -111,6 +111,25 @@ function m.read_ini(dir)
 	end
 end
 
+function m.read_text(dir)
+	-- Text1
+	-- Text2
+	local t = {}
+	local f = io.open(dir)
+	log(dir)
+	if f then
+		for line in f:lines() do
+			if not string.match(line, ";") then
+				table.insert(t, tostring(line))
+			end
+		end
+		f:close()
+		return t
+	else
+		return nil
+	end
+end
+
 function m.init(ctx)
 	ctx.external_files = m
 end
