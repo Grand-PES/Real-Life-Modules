@@ -68,11 +68,10 @@ local function team_hex_to_dec(teamHex)
 
 	return binToNum(getBits(memory.unpack("u32", teamHex)):sub(1, -15))
 end
-local m = {}
+local m = { version = 1.0 }
 
 -- exposed members/methods
 -- ###########################################################
-m.version = "0.0"
 m.year_addr = nil
 m.season_addr = nil
 m.champion_addrs = {}

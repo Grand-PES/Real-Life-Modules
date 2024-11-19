@@ -4,11 +4,10 @@
 -- originally posted on evo-web & github
 -- helper methods/members
 -- #########################################################
-local m = {}
+local m = { version = 1.0 }
 
 -- exposed members/methods
 -- ###########################################################
-m.version = "0.0"
 
 function m.read_csv(dir)
 	-- Head1,Head2,...
