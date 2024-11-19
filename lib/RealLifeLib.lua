@@ -38,8 +38,10 @@ local function getAddressWithVariableBytesUsingStart(
 end
 
 local function tableIsEmpty(self)
-	for _, _ in pairs(self) do
-		return false
+	if self then
+		for _, _ in pairs(self) do
+			return false
+		end
 	end
 	return true
 end
@@ -73,9 +75,10 @@ local m = {}
 m.version = "0.0"
 m.year_addr = nil
 m.season_addr = nil
-m.champion_addr = nil
+m.champion_addrs = {}
 m.leagues_champions = {}
 m.tables_addrs = {}
+m.old_tables_addrs = {}
 m.comps_tables = {}
 
 function m.hook_year()
@@ -96,70 +99,60 @@ function m.hook_season()
 	return m.season_addr
 end
 
-function m.hook_table(tid)
-	if m.tables_addrs[tid.dec] == nil then
-		m.tables_addrs[tid.dec] =
-			getAddressWithVariableBytesUsingStart("\x64\xC8\x00" .. tid.hex, 771, "\xC9", startAddress)
+function m.hook_table(tid, year)
+	if year == "current" then
+		if m.tables_addrs[tid.dec] == nil then
+			m.tables_addrs[tid.dec] =
+				getAddressWithVariableBytesUsingStart("\x64\xC8\x00" .. tid.hex, 771, "\xC9", startAddress)
+		end
+		return m.tables_addrs[tid.dec]
+	else
+		if not m.old_tables_addrs[tid.dec] then
+			m.old_tables_addrs[tid.dec] =
+				memory.safe_search(tid.hex .. memory.pack("u16", year) .. tid.hex, tablestartAddress, tableendAddress)
+		end
+		return m.old_tables_addrs[tid.dec]
 	end
-	return m.tables_addrs[tid.dec]
 end
 
-function m.comp_table(tid, no_of_teams)
+function m.comp_table(tid, no_of_teams, year)
 	if tableIsEmpty(m.comps_tables[tid.dec]) then
 		m.comps_tables[tid.dec] = {}
-		local addr = m.hook_table(tid)
+	end
+	if tableIsEmpty(m.comps_tables[tid.dec][year]) then
+		local addr = m.hook_table(tid, year)
 		if addr then
+			log("yes it is")
+			m.comps_tables[tid.dec][year] = {}
 			for i = 1, no_of_teams do
-				m.comps_tables[tid.dec][i].hex = memory.read(addr + i * 4 + 367, 4)
-				m.comps_tables[tid.dec][i].dec = team_hex_to_dec(m.comps_tables[tid.dec][i].hex)
+				m.comps_tables[tid.dec][year][i] = {}
+				m.comps_tables[tid.dec][year][i].hex = memory.read(addr + i * 4 + 367, 4)
+				m.comps_tables[tid.dec][year][i].dec = team_hex_to_dec(m.comps_tables[tid.dec][year][i].hex)
 			end
 		else
 			return nil
 		end
 	end
-	return m.comps_tables[tid.dec]
+	return m.comps_tables[tid.dec][year]
 end
 
 function m.hook_champion(tid)
-	if not m.champion_addr then
-		m.champion_addr = memory.safe_search(
-			memory.pack("u8", tid)
-				.. "\x00"
-				.. memory.pack("u16", m.current_year().dec - 1)
-				.. memory.pack("u8", tid)
-				.. "\x00\x00\x00",
+	if not m.champion_addrs[tid.dec] then
+		m.champion_addrs[tid.dec] = memory.safe_search(
+			tid.hex .. "\x00" .. memory.pack("u16", m.current_year().dec - 1) .. tid.hex .. "\x00\x00\x00",
 			tablestartAddress,
 			tableendAddress
 		)
 	end
-	return m.champion_addr
+	return m.champion_addrs[tid.dec]
 end
 
 function m.league_champion(tid)
-	if not m.leagues_champions[tid] then
-		local v1 = memory.pack("u8", tid)
-		log(memory.hex(v1))
-		local v2 = memory.pack("u16", m.current_year().dec)
-		log(memory.hex(v2))
-		local search = memory.safe_search(
-			v1 .. "\x00" .. m.current_year().hex .. v1 .. "\x00\x00\x00",
-			tablestartAddress,
-			tableendAddress
-		)
-		local search2 = memory.safe_search(
-			memory.pack("u8", tid)
-				.. "\x00"
-				.. memory.pack("u16", m.current_year().dec - 1)
-				.. memory.pack("u8", tid)
-				.. "\x00\x00\x00",
-			startAddress,
-			endAddress
-		)
-		log(tostring(search))
-		m.leagues_champions[tid].hex = memory.read(search + 792, 4) or 0
-		m.leagues_champions[tid].dec = team_hex_to_dec(m.leagues_champions[tid].hex)
+	if not m.leagues_champions[tid.dec] then
+		m.leagues_champions[tid.dec].hex = memory.read(m.hook_champion(tid) + 792, 4) or 0
+		m.leagues_champions[tid.dec].dec = team_hex_to_dec(m.leagues_champions[tid.dec].hex)
 	end
-	return m.leagues_champions[tid]
+	return m.leagues_champions[tid.dec]
 end
 
 function m.current_team_id()
@@ -181,6 +174,30 @@ function m.current_season()
 	t.hex = memory.read(m.hook_season() - 3, 2) or 0
 	t.dec = memory.unpack("u16", t.hex) or 0
 	return t
+end
+
+function m.pack_id(encode, decimal)
+	if type(decimal) == "table" then
+		return decimal
+	elseif type(decimal) == "string" or type(decimal) == "number" then
+		return {
+			["dec"] = tonumber(decimal),
+			["hex"] = memory.pack(encode, decimal),
+		}
+	else
+		log("unknown type of 'decimal'")
+	end
+end
+
+function m.dispose()
+	m.year_addr = nil
+	m.season_addr = nil
+	m.champion_addrs = {}
+	m.leagues_champions = {}
+	m.tables_addrs = {}
+	m.old_tables_addrs = {}
+	m.comps_tables = {}
+	collectgarbage()
 end
 
 -- function m.current_EPL_champion()
@@ -205,6 +222,7 @@ end
 -- end
 
 function m.init(ctx)
+	m.dispose()
 	ctx.real_life_mode = m
 end
 
