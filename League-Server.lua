@@ -552,7 +552,7 @@ function m.data_ready(ctx, filename)
 				end
 				if
 					(currentMonth == 1 and config["STARTS_IN_JAN"] == "true")
-					or ((currentMonth == 6 or currentMonth == 8) and config["STARTS_IN_JAN"] == "false")
+					or ((currentMonth >= 6 and currentMonth <= 8) and config["STARTS_IN_JAN"] == "false")
 				then
 					local total_matchdays = config["TOTAL_TEAMS"] * 2 - 2
 					local total_games_per_matchday = config["TOTAL_TEAMS"] / 2
