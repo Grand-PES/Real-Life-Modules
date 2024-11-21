@@ -83,9 +83,9 @@ local function teamHextoID(teamHex)
 	return binToNum(getBits(memory.unpack("u32", teamHex)):sub(1, -15))
 end
 
-local function gamedayToTeamIDs(matchday)
+local function gamedayToTeamIDs(matchday, total_games_per_matchday)
 	local t = {}
-	for n = 1, 10 do
+	for n = 1, total_games_per_matchday do
 		local gameAddress = matchday[n]
 		local homeHex = memory.read(gameAddress + 20, 4)
 		local awayHex = memory.read(gameAddress + 24, 4)
@@ -586,7 +586,7 @@ function m.data_ready(ctx, filename)
 							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.csv")
 
 							teamNamestoHex = mapTeamIDs(
-								gamedayToTeamIDs(matchdays[1]),
+								gamedayToTeamIDs(matchdays[1], total_games_per_matchday),
 								-- tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"], "current")),
 								pandas.read_num_text_map(mapsPath .. "\\map_team.csv")
 							)
