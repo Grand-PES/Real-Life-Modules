@@ -16,11 +16,8 @@ local compsMap
 local mlteamnow = {}
 local CalendarAddresses = {}
 local Schedule = {}
-local gamesSchedule = {}
-local matchdays = {}
 local teamNamestoHex = {}
 local customMatchdaysData = {}
-local fixtureNumberInterval = 0
 -- Config
 local isDebugging = false
 -- local changeDate = false
@@ -29,8 +26,6 @@ function m.dispose()
 	mlteamnow = {}
 	CalendarAddresses = {}
 	Schedule = {}
-	gamesSchedule = {}
-	matchdays = {}
 	teamNamestoHex = {}
 	customMatchdaysData = {}
 	collectgarbage()
@@ -83,14 +78,15 @@ local function teamHextoID(teamHex)
 	return binToNum(getBits(memory.unpack("u32", teamHex)):sub(1, -15))
 end
 
-local function gamedayToTeamIDs(matchday, total_games_per_matchday)
+local function gamedayToTeamIDs(rlmLib, total_games_per_matchday, id, type, isGeneric)
 	local t = {}
 	for n = 1, total_games_per_matchday do
-		local gameAddress = matchday[n]
+		local gameAddress = rlmLib.get_comp_schedule(id, type, isGeneric, 1, n, total_games_per_matchday)
 		local homeHex = memory.read(gameAddress + 20, 4)
 		local awayHex = memory.read(gameAddress + 24, 4)
 		t[teamHextoID(homeHex)] = homeHex
 		t[teamHextoID(awayHex)] = awayHex
+		log(string.format("%d is done", n))
 	end
 	return t
 end
@@ -175,103 +171,6 @@ local function getGamesOfLeagueUsingMemory(currentleagueid, matchdaytotal)
 	return t
 end
 
-local function getGamesOfCompUsingLoop(currentleagueid, type_byte, yearnow, total_matchdays, total_games_per_matchday)
-	local t = {}
-	local addr
-	for matchday = 1, total_matchdays do
-		t[matchday] = {}
-		for game = 1, total_games_per_matchday do
-			if matchday == 1 and game == 1 then
-				addr = memory.safe_search(
-					"\x00\x00" .. memory.pack("u16", currentleagueid) .. type_byte .. "\x20" .. yearnow,
-					startAddress,
-					endAddress
-				)
-				if isDebugging then
-					log(memory.hex("\x00\x00" .. memory.pack("u16", currentleagueid) .. type_byte .. "\x20" .. yearnow))
-				end
-				if addr ~= nil then
-					if isDebugging then
-						log(memory.hex(addr))
-					end
-					fixtureNumberInterval = memory.unpack("u16", memory.read(addr - 2, 2))
-					table.insert(t[1], addr - 2)
-				else
-					log(string.format("matchdays: matchday 1 game 1 wasn't found for %s, skipping...", currentleagueid))
-					return {}
-				end
-			else
-				addr = t[1][1] + 596 * (game - 1) + 596 * (matchday - 1) * total_games_per_matchday
-				table.insert(t[matchday], addr)
-			end
-			if isDebugging then
-				log(
-					string.format(
-						"matchdays: MatchDay %d Game %d : %s",
-						matchday,
-						game,
-						memory.hex(memory.read(addr, 28))
-					)
-				)
-			end
-		end
-	end
-	return t
-end
-
-local function getSchedule(currentCompId, compType, total_matchdays, total_games_per_matchday)
-	local t = {}
-	local addr
-	local compIdHex = memory.pack("u16", currentCompId)
-	for matchday = 1, total_matchdays do
-		t[matchday] = {}
-		for game = 1, total_games_per_matchday do
-			if matchday == 1 and game == 1 then
-				if compType == "cup" then
-					addr = getAddressWithVariableBytes(
-						compIdHex .. "\x00\x00",
-						10,
-						"\xff\xff" .. compIdHex .. "\x6E\x00" .. compIdHex .. "\x2f\x00\xff\xff",
-						startAddress
-					)
-				else
-					addr = getAddressWithVariableBytes(
-						compIdHex .. "\x00\x00",
-						10,
-						"\xff\xff" .. compIdHex .. "\x00\x00\xff\xff\xf7\x07",
-						startAddress
-					)
-				end
-				if addr then
-					table.insert(t[1], addr - 6)
-				else
-					log(
-						string.format(
-							"gamesSchedule: matchday 1 game 1 wasn't found for %s, skipping...",
-							currentCompId
-						)
-					)
-					return {}
-				end
-			else
-				addr = t[1][1] + 32 * (game - 1) + 520 * (matchday - 1)
-				table.insert(t[matchday], addr)
-			end
-			if isDebugging then
-				log(
-					string.format(
-						"gamesSchedule: MatchDay %d Game %d : %s",
-						matchday,
-						game,
-						memory.hex(memory.read(addr, 28))
-					)
-				)
-			end
-		end
-	end
-	return t
-end
-
 -- local function getAllAddressesWithVariableBytes(addrBeginning, variableByteLength, addrEndning, variableStartAddress,
 --                                                 returnValueOffset)
 --     local t = {}
@@ -307,6 +206,7 @@ local function tableIsEmpty(self)
 end
 
 local function writeGame(
+	rlmLib,
 	config,
 	startingYear,
 	fixtureNumber,
@@ -320,11 +220,12 @@ local function writeGame(
 	homeTeam,
 	awayTeam,
 	isGeneric,
-	isCurrentTeamInLeague
+	isCurrentTeamInLeague,
+	fixtureNumberInterval
 )
 	local fixNoHex = memory.pack(
 		"u16",
-		fixtureNumber - 1 + (config["TOTAL_TEAMS"] / 2) * (gameweekNumber - 1) + fixtureNumberInterval
+		fixtureNumber - 1 + config.TOTAL_GAMES_PER_MATCHDAY * (gameweekNumber - 1) + fixtureNumberInterval
 	)
 
 	-- Matchday Writing
@@ -339,8 +240,15 @@ local function writeGame(
 	-- 10 C0 2C 00 (Home team)
 	-- 04 80 19 00 (Away team)
 
-	local gameAddress = matchdays[gameweekNumber][fixtureNumber]
-	local matchdaySchedule = gamesSchedule[gameweekNumber][fixtureNumber]
+	local gameAddress = rlmLib.get_comp_schedule(
+		config.ID,
+		config.TYPE,
+		isGeneric,
+		gameweekNumber,
+		fixtureNumber,
+		config.TOTAL_GAMES_PER_MATCHDAY
+	)
+	local matchdaySchedule = rlmLib.get_schedule_matchday(config.ID, config.TYPE, gameweekNumber, fixtureNumber)
 	if isDebugging then
 		log(
 			string.format(
@@ -554,39 +462,42 @@ function m.data_ready(ctx, filename)
 					(currentMonth == 1 and config["STARTS_IN_JAN"] == "true")
 					or ((currentMonth >= 6 and currentMonth <= 8) and config["STARTS_IN_JAN"] == "false")
 				then
-					local total_matchdays = config["TOTAL_TEAMS"] * 2 - 2
-					local total_games_per_matchday = config["TOTAL_TEAMS"] / 2
-					local typeByte
-					if config["TYPE"] == "cup" then
-						typeByte = "\x2e"
-					elseif config["TYPE"] == "supercup" then
-						typeByte = "\x35"
-					else
-						typeByte = "\x00"
+					local fixtureNumberInterval
+					if config["TOTAL_MATCHDAYS"] == nil then
+						config["TOTAL_MATCHDAYS"] = config["TOTAL_TEAMS"] * 2 - 2
 					end
-					if config["TOTAL_MATCHDAYS"] ~= nil then
-						total_matchdays = config["TOTAL_MATCHDAYS"]
-					end
-					if config["TOTAL_GAMES_PER_MATCHDAY"] ~= nil then
-						total_games_per_matchday = config["TOTAL_GAMES_PER_MATCHDAY"]
+					if config["TOTAL_GAMES_PER_MATCHDAY"] == nil then
+						config["TOTAL_GAMES_PER_MATCHDAY"] = config["TOTAL_TEAMS"] / 2
 					end
 					local hasCustom = existingYears[tostring(yearnow.dec)] or config["DEFAULT_MAP"]
 					local isGeneric = config["IS_GENERIC"] == "true"
-					gamesSchedule = getSchedule(i, config["TYPE"], total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule> MatchDay ##
-					if isGeneric then
-						matchdays =
-							getGamesOfCompUsingLoop(i, typeByte, "\xff\xff", total_matchdays, total_games_per_matchday)
-					else
-						matchdays =
-							getGamesOfCompUsingLoop(i, typeByte, yearnow.hex, total_matchdays, total_games_per_matchday) -- Found in ML Main Menu> Team Info> Schedule
+					if true then -- a scope, i don't need addr out of here
+						local addr = rlmLib.get_comp_schedule(
+							config.ID,
+							config.TYPE,
+							isGeneric,
+							1,
+							1,
+							config.TOTAL_GAMES_PER_MATCHDAY
+						)
+						if addr then
+							fixtureNumberInterval = memory.unpack("u16", memory.read(addr, 2))
+						end
 					end
-					if not tableIsEmpty(matchdays) or not tableIsEmpty(gamesSchedule) then
+					-- intialize the addresses needed
+					if fixtureNumberInterval or not rlmLib.get_schedule_matchday(config.ID, config.TYPE, 1, 1) then
 						if hasCustom then -- custom edit based on year
 							local mapsPath = configPath .. hasCustom
 							customMatchdaysData = pandas.read_csv(mapsPath .. "\\map_matchdays.csv")
 
 							teamNamestoHex = mapTeamIDs(
-								gamedayToTeamIDs(matchdays[1], total_games_per_matchday),
+								gamedayToTeamIDs(
+									rlmLib,
+									config.TOTAL_GAMES_PER_MATCHDAY,
+									config.ID,
+									config.TYPE,
+									isGeneric
+								),
 								-- tableToTeamIDs(rlmLib.comp_table(config["ID"], config["TOTAL_TEAMS"], "current")),
 								pandas.read_num_text_map(mapsPath .. "\\map_team.csv")
 							)
@@ -628,6 +539,7 @@ function m.data_ready(ctx, filename)
 									end
 								end
 								writeGame(
+									rlmLib,
 									config,
 									startingYear,
 									fixtureNumber,
@@ -641,15 +553,15 @@ function m.data_ready(ctx, filename)
 									homeTeam,
 									awayTeam,
 									isGeneric,
-									i == currentleagueid.dec
+									i == currentleagueid.dec,
+									fixtureNumberInterval
 								)
 							end
 						else
 							log("current year config is not found, aborting...")
 						end
 					else
-						log("matchdays or games schedule was not found, skipping current league")
-						log("review logs")
+						log(string.format("skipping %s, addresses weren't found", config["NAME"]))
 					end
 				else
 					log(string.format("skipping %s, league starts in jan? %s", config["NAME"], config["STARTS_IN_JAN"]))

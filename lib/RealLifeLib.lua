@@ -37,6 +37,29 @@ local function getAddressWithVariableBytesUsingStart(
 	end
 end
 
+local function getAddressWithVariableBytesUsingEnding(
+	addrBeginning,
+	variableByteLength,
+	addrEndning,
+	variableStartAddress
+)
+	local addr = memory.safe_search(addrEndning, variableStartAddress, endAddress)
+	if addr then
+		if memory.read(addr - #addrBeginning - variableByteLength, #addrBeginning) == addrBeginning then
+			return addr - variableByteLength - #addrBeginning
+		else
+			return getAddressWithVariableBytesUsingEnding(
+				addrBeginning,
+				variableByteLength,
+				addrEndning,
+				addr + #addrEndning
+			)
+		end
+	else
+		return nil
+	end
+end
+
 local function tableIsEmpty(self)
 	if self then
 		for _, _ in pairs(self) do
@@ -79,6 +102,8 @@ m.leagues_champions = {}
 m.tables_addrs = {}
 m.old_tables_addrs = {}
 m.comps_tables = {}
+m.schedule_matchday = {}
+m.comp_schedule = {}
 
 function m.hook_year()
 	if not m.year_addr then
@@ -133,6 +158,62 @@ function m.comp_table(tid, no_of_teams, year)
 		end
 	end
 	return m.comps_tables[tid.dec][year]
+end
+
+function m.get_schedule_matchday(tid, compType, gw, fxt)
+	if m.schedule_matchday[tid.dec] == nil then
+		if compType == "cup" then
+			m.schedule_matchday[tid.dec] = getAddressWithVariableBytesUsingEnding(
+				tid.hex .. "\x00\x00",
+				10,
+				"\xff\xff" .. tid.hex .. "\x6E\x00" .. tid.hex .. "\x2f\x00\xff\xff",
+				startAddress
+			)
+		else
+			m.schedule_matchday[tid.dec] = getAddressWithVariableBytesUsingEnding(
+				tid.hex .. "\x00\x00",
+				10,
+				"\xff\xff" .. tid.hex .. "\x00\x00\xff\xff\xf7\x07",
+				startAddress
+			)
+		end
+		if m.schedule_matchday[tid.dec] then
+			m.schedule_matchday[tid.dec] = m.schedule_matchday[tid.dec] - 6
+		else
+			log("schedule_matchday pointer wasn't found")
+			return nil
+		end
+	end
+	return m.schedule_matchday[tid.dec] + 32 * (fxt - 1) + 520 * (gw - 1)
+end
+
+function m.get_comp_schedule(tid, compType, isGeneric, gw, fxt, total_games_per_matchday)
+	if m.comp_schedule[tid.dec] == nil then
+		local type_byte
+		if compType == "cup" then
+			type_byte = "\x2e"
+		elseif compType == "supercup" then
+			type_byte = "\x35"
+		else
+			type_byte = "\x00"
+		end
+		local yearnow
+		if isGeneric then
+			yearnow = "\xff\xff"
+		else
+			yearnow = m.current_season().hex
+		end
+		m.comp_schedule[tid.dec] =
+			memory.safe_search("\x00\x00" .. tid.hex .. type_byte .. "\x20" .. yearnow, startAddress, endAddress)
+		if m.comp_schedule[tid.dec] then
+			-- fixtureNumberInterval = memory.unpack("u16", memory.read(addr - 2, 2))
+			m.comp_schedule[tid.dec] = m.comp_schedule[tid.dec] - 2
+		else
+			log("schedule pointer wasn't found")
+			return nil
+		end
+	end
+	return m.comp_schedule[tid.dec] + 596 * (fxt - 1) + 596 * (gw - 1) * total_games_per_matchday
 end
 
 function m.hook_champion(tid)
@@ -196,6 +277,8 @@ function m.dispose()
 	m.tables_addrs = {}
 	m.old_tables_addrs = {}
 	m.comps_tables = {}
+	m.matchday_schedule = {}
+	m.comp_schedule = {}
 	collectgarbage()
 end
 
