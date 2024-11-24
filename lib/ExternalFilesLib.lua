@@ -4,7 +4,7 @@
 -- originally posted on evo-web & github
 -- helper methods/members
 -- #########################################################
-local m = { version = 1.0 }
+local m = { version = 1.1 }
 
 -- exposed members/methods
 -- ###########################################################
@@ -17,8 +17,8 @@ function m.read_csv(dir)
 	local firstLine = true
 	local t = {}
 	local headers = {}
-
 	if f then
+		log(string.format("reading: %s", dir))
 		for line in f:lines() do
 			if not string.match(line, ";") then
 				if firstLine then
@@ -49,8 +49,8 @@ function m.read_num_text_map(dir)
 	-- 00,Name
 	local t = {}
 	local f = io.open(dir)
-
 	if f then
+		log(string.format("reading: %s", dir))
 		for line in f:lines() do
 			if not string.match(line, ";") then
 				local id, name = line:match("^(%d+),(.+)$")
@@ -70,8 +70,8 @@ function m.read_text_num_map(dir)
 	-- NAME=00
 	local t = {}
 	local f = io.open(dir)
-
 	if f then
+		log(string.format("reading: %s", dir))
 		for line in f:lines() do
 			if not string.match(line, ";") then
 				local name, id = line:match("^(.+)=(%d+)$")
@@ -93,8 +93,8 @@ function m.read_ini(dir)
 	-- HEAD=DATA
 	local t = {}
 	local f = io.open(dir)
-
 	if f then
+		log(string.format("reading: %s", dir))
 		for line in f:lines() do
 			if not string.match(line, ";") then
 				local name, value = line:match("^(.+)=(.+)$")
@@ -115,8 +115,8 @@ function m.read_text(dir)
 	-- Text2
 	local t = {}
 	local f = io.open(dir)
-	log(dir)
 	if f then
+		log(string.format("reading: %s", dir))
 		for line in f:lines() do
 			if not string.match(line, ";") then
 				table.insert(t, tostring(line))
