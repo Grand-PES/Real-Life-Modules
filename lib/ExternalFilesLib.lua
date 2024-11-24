@@ -4,7 +4,7 @@
 -- originally posted on evo-web & github
 -- helper methods/members
 -- #########################################################
-local m = { version = 1.0 }
+local m = { version = 1.1 }
 
 -- exposed members/methods
 -- ###########################################################
