@@ -282,7 +282,7 @@ local function writeGame(
 		memory.write(matchdaySchedule + 14, teamNamestoHex[awayTeam])
 	end
 
-	if to_total_days and to_month and to_day then
+	if to_total_days and to_month and to_day and to_total_days ~= from_total_days then
 		local sum = memory.unpack("u8", memory.read(Schedule[to_total_days], 1)) + 1
 		memory.write(
 			gameAddress + 8,
