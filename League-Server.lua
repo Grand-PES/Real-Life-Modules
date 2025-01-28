@@ -50,8 +50,8 @@ local function date_to_totaldays(date)
 		end
 		return totaldays
 	else
-		log("Incorrect Date: be realistic plz")
-		return nil
+		log("Incorrect Date, setting to 0...")
+		return 0
 	end
 end
 
@@ -249,6 +249,20 @@ local function writeGame(
 		config.TOTAL_GAMES_PER_MATCHDAY
 	)
 	local matchdaySchedule = rlmLib.get_schedule_matchday(config.ID, config.TYPE, gameweekNumber, fixtureNumber)
+	-- we need to know the from date, unless its generic (/xff/xff)
+	if from_total_days == 0 and not isGeneric then
+		-- memory.write(
+		-- 	gameAddress + 8,
+		-- 	memory.pack("u16", startingYear) .. memory.pack("u8", to_month) .. memory.pack("u8", to_day)
+		-- )
+		from_total_days = date_to_totaldays(
+			string.format(
+				"%02d/%02d",
+				memory.unpack("u8", memory.read(gameAddress + 10, 1)),
+				memory.unpack("u8", memory.read(gameAddress + 11, 1))
+			)
+		)
+	end
 	if isDebugging then
 		log(
 			string.format(
@@ -504,7 +518,14 @@ function m.data_ready(ctx, filename)
 							for n = 1, #customMatchdaysData do
 								local from_total_days
 								if not isGeneric then
-									from_total_days = date_to_totaldays(customMatchdaysData[n]["FromDate"])
+									if
+										customMatchdaysData[n]["FromDate"]
+										and customMatchdaysData[n]["FromDate"] ~= "00/00"
+									then
+										from_total_days = date_to_totaldays(customMatchdaysData[n]["FromDate"])
+									else
+										from_total_days = 0
+									end
 								end
 								local to_month, to_day
 								local to_total_days
