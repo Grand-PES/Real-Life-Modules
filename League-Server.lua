@@ -308,7 +308,7 @@ local function writeGame(
 		memory.write(Schedule[to_total_days] - (sum * -2 + 562), fixNoHex)
 		-- Remove "from_date" games
 		-- TODO: Decode that section for proper writing
-		if not isGeneric then
+		if not isGeneric and from_total_days ~= 0 then
 			memory.write(Schedule[from_total_days] - 560, string.rep("\xff", 560))
 		end
 		-- Stop or Skip
@@ -328,7 +328,7 @@ local function writeGame(
 				memory.write(CalendarAddresses[to_total_days] + 8, game_type_hex) -- 02 00 Playable day (01 UCL) (03 not Playableday)
 				memory.write(CalendarAddresses[to_total_days] + 10, "\x00\x00") -- 00 00 Blank
 				memory.write(CalendarAddresses[to_total_days] + 12, mlteamnow.hex)
-				if not isGeneric then
+				if not isGeneric and from_total_days ~= 0 then
 					memory.write(CalendarAddresses[from_total_days], BlankDate) -- (from,Blank)
 				end -- Team ID
 			else
