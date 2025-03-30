@@ -297,19 +297,28 @@ local function writeGame(
 	end
 
 	if to_total_days and to_month and to_day then
+		-- calc sum of games on to date
 		local sum = memory.unpack("u8", memory.read(Schedule[to_total_days], 1)) + 1
+		-- change to_date on gameAddress
 		memory.write(
 			gameAddress + 8,
 			memory.pack("u16", startingYear) .. memory.pack("u8", to_month) .. memory.pack("u8", to_day)
 		)
 		-- Schedule Writing
+		-- update sum
 		memory.write(Schedule[to_total_days], memory.pack("u8", sum))
 		-- Write new fixture after previous ones (if there any)
 		memory.write(Schedule[to_total_days] - (sum * -2 + 562), fixNoHex)
-		-- Remove "from_date" games
-		-- TODO: Decode that section for proper writing
+		-- Remove fixture from Schedule
 		if not isGeneric and from_total_days ~= 0 then
-			memory.write(Schedule[from_total_days] - 560, string.rep("\xff", 560))
+			local fromFixNo = memory.read("u16", CalendarAddresses[from_total_days], 2)
+			for i = 1, 560 do
+				local fromFixTempo = memory.read("u8", Schedule[from_total_days] + (i - 560))
+				if fromFixTempo == fromFixNo then
+					memory.write(Schedule[from_total_days] + (i - 560), "\xff")
+					break
+				end
+			end
 		end
 		-- Stop or Skip
 		if isCurrentTeamInLeague then
@@ -328,7 +337,7 @@ local function writeGame(
 				memory.write(CalendarAddresses[to_total_days] + 8, game_type_hex) -- 02 00 Playable day (01 UCL) (03 not Playableday)
 				memory.write(CalendarAddresses[to_total_days] + 10, "\x00\x00") -- 00 00 Blank
 				memory.write(CalendarAddresses[to_total_days] + 12, mlteamnow.hex)
-				if not isGeneric and from_total_days ~= 0 then
+				if not isGeneric and from_total_days ~= 0 and from_total_days ~= to_total_days then
 					memory.write(CalendarAddresses[from_total_days], BlankDate) -- (from,Blank)
 				end -- Team ID
 			else
