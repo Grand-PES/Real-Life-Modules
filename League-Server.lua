@@ -2,7 +2,7 @@
 --Research: SMc81, .andre92
 --Special thank's: crabshank
 
-local m = { version = 1.1 }
+local m = { version = 1.2 }
 
 -- Constants
 local contentPath = ".\\content\\League-Server\\"

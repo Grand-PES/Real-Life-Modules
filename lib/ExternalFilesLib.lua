@@ -2,9 +2,7 @@
 -- author: Mohamed2746
 -- version: 0.0
 -- originally posted on evo-web & github
--- helper methods/members
--- #########################################################
-local m = { version = 1.1 }
+local m = { version = 1.2 }
 
 -- exposed members/methods
 -- ###########################################################

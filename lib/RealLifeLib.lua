@@ -1,8 +1,10 @@
 -- PES 2021 Real Life Modes Library Module
 -- Based on CommonLib.lua by zlac
 -- author: Mohamed2746, Grand
--- version: 0.0
 -- originally posted on evo-web
+
+local m = { version = 1.2 }
+
 -- helper methods/members
 -- #########################################################
 local startAddress = 0x00007FF4D0000000
@@ -91,7 +93,6 @@ local function team_hex_to_dec(teamHex)
 
 	return binToNum(getBits(memory.unpack("u32", teamHex)):sub(1, -15))
 end
-local m = { version = 1.1 }
 
 -- exposed members/methods
 -- ###########################################################
